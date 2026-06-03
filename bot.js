@@ -833,8 +833,122 @@ app.post('/webhook', async (req, res) => {
   }
 });
 
-// =========================
-// Запуск
+async function createTablesIfNotExist() {
+  const queries = [
+    // users
+    `CREATE TABLE IF NOT EXISTS users (
+      id SERIAL PRIMARY KEY,
+      max_user_id BIGINT UNIQUE NOT NULL,
+      username VARCHAR(255),
+      first_name VARCHAR(255),
+      last_name VARCHAR(255),
+      created_at TIMESTAMP DEFAULT NOW(),
+      updated_at TIMESTAMP DEFAULT NOW()
+    );`,
+
+    // user_sessions
+    `CREATE TABLE IF NOT EXISTS user_sessions (
+      user_id BIGINT PRIMARY KEY REFERENCES users(max_user_id),
+      state VARCHAR(50),
+      data JSONB DEFAULT '{}'::jsonb,
+      updated_at TIMESTAMP DEFAULT NOW()
+    );`,
+
+    // raffles
+    `CREATE TABLE IF NOT EXISTS raffles (
+      id SERIAL PRIMARY KEY,
+      creator_user_id BIGINT REFERENCES users(max_user_id),
+      title VARCHAR(255) DEFAULT 'Без названия',
+      description TEXT,
+      prizes TEXT,
+      prize_count INT DEFAULT 1,
+      end_at TIMESTAMP,
+      status VARCHAR(20) DEFAULT 'draft',
+      publish_in_general BOOLEAN DEFAULT false,
+      created_at TIMESTAMP DEFAULT NOW(),
+      updated_at TIMESTAMP DEFAULT NOW()
+    );`,
+
+    // raffle_channels
+    `CREATE TABLE IF NOT EXISTS raffle_channels (
+      id SERIAL PRIMARY KEY,
+      raffle_id INT REFERENCES raffles(id),
+      channel_id BIGINT NOT NULL,
+      channel_title VARCHAR(255),
+      is_required BOOLEAN DEFAULT true,
+      publish_post BOOLEAN DEFAULT true,
+      created_at TIMESTAMP DEFAULT NOW(),
+      updated_at TIMESTAMP DEFAULT NOW()
+    );`,
+
+    // raffle_queue
+    `CREATE TABLE IF NOT EXISTS raffle_queue (
+      id SERIAL PRIMARY KEY,
+      raffle_id INT REFERENCES raffles(id),
+      queue_type VARCHAR(50) NOT NULL,
+      scheduled_at TIMESTAMP NOT NULL,
+      payload JSONB DEFAULT '{}'::jsonb,
+      status VARCHAR(20) DEFAULT 'pending',
+      created_at TIMESTAMP DEFAULT NOW(),
+      updated_at TIMESTAMP DEFAULT NOW()
+    );`,
+
+    // raffle_user_entry
+    `CREATE TABLE IF NOT EXISTS raffle_user_entry (
+      id SERIAL PRIMARY KEY,
+      raffle_id INT REFERENCES raffles(id),
+      user_id BIGINT REFERENCES users(max_user_id),
+      created_at TIMESTAMP DEFAULT NOW()
+    );`,
+
+    // raffle_participants
+    `CREATE TABLE IF NOT EXISTS raffle_participants (
+      id SERIAL PRIMARY KEY,
+      raffle_id INT REFERENCES raffles(id),
+      user_id BIGINT REFERENCES users(max_user_id),
+      ticket_number BIGINT,
+      invited_by BIGINT,
+      is_valid BOOLEAN DEFAULT true,
+      created_at TIMESTAMP DEFAULT NOW()
+    );`,
+
+    // raffle_winners
+    `CREATE TABLE IF NOT EXISTS raffle_winners (
+      id SERIAL PRIMARY KEY,
+      raffle_id INT REFERENCES raffles(id),
+      user_id BIGINT REFERENCES users(max_user_id),
+      ticket_number BIGINT,
+      prize_text VARCHAR(255),
+      created_at TIMESTAMP DEFAULT NOW()
+    );`,
+
+    // raffle_posts
+    `CREATE TABLE IF NOT EXISTS raffle_posts (
+      id SERIAL PRIMARY KEY,
+      raffle_id INT REFERENCES raffles(id),
+      channel_id BIGINT,
+      message_id BIGINT,
+      created_at TIMESTAMP DEFAULT NOW()
+    );`
+  ];
+
+  for (const q of queries) {
+    try {
+      await pool.query(q);
+    } catch (err) {
+      console.error('Error creating table:', err.message);
+    }
+  }
+
+  console.log('✅ All tables are ensured.');
+}
+
+// Вставь прямо перед запуском сервера
+createTablesIfNotExist().then(() => {
+  
+  });
+
+
 // =========================
 setInterval(processQueue, Number(process.env.CHECK_INTERVAL_SECONDS || 30) * 1000);
 
