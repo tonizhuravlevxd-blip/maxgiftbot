@@ -1,0 +1,17 @@
+{
+  "name": "max-raffle-bot",
+  "version": "1.0.0",
+  "description": "Bot for giveaways in MAX",
+  "main": "bot.js",
+  "scripts": {
+    "start": "node bot.js"
+  },
+  "dependencies": {
+    "axios": "^1.7.2",
+    "body-parser": "^1.20.2",
+    "dayjs": "^1.11.13",
+    "dotenv": "^16.4.5",
+    "express": "^4.19.2",
+    "pg": "^8.12.0"
+  }
+}
