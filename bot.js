@@ -1821,7 +1821,6 @@ async function handleMaxUpdate(update) {
         return;
       }
 
-      await answerMaxCallback(callbackId, '✅');
 
       await ensureUser(cb.from);
       await handleCallbackQuery(cb);
