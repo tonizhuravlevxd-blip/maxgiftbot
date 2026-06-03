@@ -1,3 +1,4 @@
+-- users
 CREATE TABLE IF NOT EXISTS users (
     id SERIAL PRIMARY KEY,
     max_user_id BIGINT UNIQUE NOT NULL,
@@ -7,6 +8,7 @@ CREATE TABLE IF NOT EXISTS users (
     created_at TIMESTAMP DEFAULT NOW()
 );
 
+-- raffles
 CREATE TABLE IF NOT EXISTS raffles (
     id SERIAL PRIMARY KEY,
     creator_user_id BIGINT NOT NULL,
@@ -25,6 +27,7 @@ CREATE TABLE IF NOT EXISTS raffles (
     updated_at TIMESTAMP DEFAULT NOW()
 );
 
+-- raffle_channels
 CREATE TABLE IF NOT EXISTS raffle_channels (
     id SERIAL PRIMARY KEY,
     raffle_id INT NOT NULL REFERENCES raffles(id) ON DELETE CASCADE,
@@ -35,6 +38,7 @@ CREATE TABLE IF NOT EXISTS raffle_channels (
     created_at TIMESTAMP DEFAULT NOW()
 );
 
+-- raffle_participants
 CREATE TABLE IF NOT EXISTS raffle_participants (
     id SERIAL PRIMARY KEY,
     raffle_id INT NOT NULL REFERENCES raffles(id) ON DELETE CASCADE,
@@ -46,6 +50,7 @@ CREATE TABLE IF NOT EXISTS raffle_participants (
     UNIQUE (raffle_id, user_id, ticket_number)
 );
 
+-- raffle_user_entry
 CREATE TABLE IF NOT EXISTS raffle_user_entry (
     id SERIAL PRIMARY KEY,
     raffle_id INT NOT NULL REFERENCES raffles(id) ON DELETE CASCADE,
@@ -54,6 +59,7 @@ CREATE TABLE IF NOT EXISTS raffle_user_entry (
     UNIQUE (raffle_id, user_id)
 );
 
+-- raffle_winners
 CREATE TABLE IF NOT EXISTS raffle_winners (
     id SERIAL PRIMARY KEY,
     raffle_id INT NOT NULL REFERENCES raffles(id) ON DELETE CASCADE,
@@ -63,6 +69,7 @@ CREATE TABLE IF NOT EXISTS raffle_winners (
     created_at TIMESTAMP DEFAULT NOW()
 );
 
+-- raffle_posts
 CREATE TABLE IF NOT EXISTS raffle_posts (
     id SERIAL PRIMARY KEY,
     raffle_id INT NOT NULL REFERENCES raffles(id) ON DELETE CASCADE,
@@ -71,6 +78,7 @@ CREATE TABLE IF NOT EXISTS raffle_posts (
     created_at TIMESTAMP DEFAULT NOW()
 );
 
+-- raffle_queue
 CREATE TABLE IF NOT EXISTS raffle_queue (
     id SERIAL PRIMARY KEY,
     raffle_id INT NOT NULL REFERENCES raffles(id) ON DELETE CASCADE,
@@ -81,6 +89,7 @@ CREATE TABLE IF NOT EXISTS raffle_queue (
     created_at TIMESTAMP DEFAULT NOW()
 );
 
+-- user_sessions
 CREATE TABLE IF NOT EXISTS user_sessions (
     id SERIAL PRIMARY KEY,
     user_id BIGINT UNIQUE NOT NULL,
@@ -89,6 +98,7 @@ CREATE TABLE IF NOT EXISTS user_sessions (
     updated_at TIMESTAMP DEFAULT NOW()
 );
 
+-- Индексы для ускорения выборок
 CREATE INDEX IF NOT EXISTS idx_raffle_queue_status_time
 ON raffle_queue(status, scheduled_at);
 
