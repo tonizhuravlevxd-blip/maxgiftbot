@@ -943,15 +943,12 @@ async function createTablesIfNotExist() {
   console.log('✅ All tables are ensured.');
 }
 
-// Вставь прямо перед запуском сервера
 createTablesIfNotExist().then(() => {
-  
+  console.log('✅ Tables created or already exist, starting server...');
+
+  setInterval(processQueue, Number(process.env.CHECK_INTERVAL_SECONDS || 30) * 1000);
+
+  app.listen(PORT, () => {
+    console.log(`Server running on port ${PORT}`);
   });
-
-
-// =========================
-setInterval(processQueue, Number(process.env.CHECK_INTERVAL_SECONDS || 30) * 1000);
-
-app.listen(PORT, () => {
-  console.log(`Server running on port ${PORT}`);
 });
