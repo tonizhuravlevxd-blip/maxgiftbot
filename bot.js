@@ -2014,15 +2014,35 @@ app.get('/join/:raffleId', async (req, res) => {
   `);
 });
 
-app.post('/webhook', (req, res) => {
+app.post(['/', '/webhook'], (req, res) => {
+  console.log('📩 WEBHOOK RECEIVED:', {
+    path: req.path,
+    time: new Date().toISOString(),
+    contentType: req.get('Content-Type'),
+    userAgent: req.get('User-Agent'),
+    hasBody: Boolean(req.body && Object.keys(req.body).length),
+    bodyPreview: JSON.stringify(req.body || {}).slice(0, 1000)
+  });
+
   if (MAX_WEBHOOK_SECRET) {
-    const receivedSecret = req.get('X-Max-Bot-Api-Secret') || '';
+    const receivedSecret =
+      req.get('X-Max-Bot-Api-Secret') ||
+      req.get('X-Webhook-Secret') ||
+      req.query.secret ||
+      '';
 
     if (receivedSecret !== MAX_WEBHOOK_SECRET) {
+      console.warn('❌ Invalid webhook secret:', {
+        path: req.path,
+        receivedSecretPresent: Boolean(receivedSecret),
+        expectedSecretEnabled: Boolean(MAX_WEBHOOK_SECRET)
+      });
+
       res.status(401).json({
         ok: false,
         error: 'Invalid webhook secret'
       });
+
       return;
     }
   }
@@ -2033,6 +2053,8 @@ app.post('/webhook', (req, res) => {
 
   const payload = req.body;
   const updates = Array.isArray(payload?.updates) ? payload.updates : [payload];
+
+  console.log(`📦 Updates count: ${updates.length}`);
 
   for (const update of updates) {
     handleMaxUpdate(update).catch(error => {
