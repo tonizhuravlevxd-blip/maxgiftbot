@@ -1,4 +1,3 @@
-
 require('dotenv').config();
 
 const express = require('express');
@@ -28,12 +27,20 @@ const MAX_BOT_TOKEN = process.env.MAX_BOT_TOKEN || '';
 const MAX_API_BASE = process.env.MAX_API_BASE || 'https://platform-api.max.ru';
 const MAX_WEBHOOK_SECRET = process.env.MAX_WEBHOOK_SECRET || process.env.WEBHOOK_SECRET || '';
 
-const APP_BASE_URL = String(
+let APP_BASE_URL = String(
   process.env.APP_BASE_URL ||
   process.env.APP_PUBLIC_URL ||
   process.env.PUBLIC_URL ||
   `http://localhost:${PORT}`
 ).replace(/\/+$/, '');
+
+if (
+  APP_BASE_URL &&
+  !APP_BASE_URL.startsWith('http://') &&
+  !APP_BASE_URL.startsWith('https://')
+) {
+  APP_BASE_URL = `https://${APP_BASE_URL}`;
+}
 
 const GENERAL_CHANNEL_ID = process.env.GENERAL_CHANNEL_ID || '';
 const CHECK_INTERVAL_SECONDS = Number(process.env.CHECK_INTERVAL_SECONDS || 30);
@@ -191,6 +198,58 @@ async function maxRequest(path, options = {}) {
   }
 
   return body;
+}
+
+async function getMaxMe() {
+  const result = await maxRequest('/me', {
+    method: 'GET'
+  });
+
+  console.log('🤖 MAX /me:', JSON.stringify(result).slice(0, 1000));
+
+  return result;
+}
+
+function buildWebhookUrl() {
+  return MAX_WEBHOOK_SECRET
+    ? `${APP_BASE_URL}/webhook?secret=${encodeURIComponent(MAX_WEBHOOK_SECRET)}`
+    : `${APP_BASE_URL}/webhook`;
+}
+
+async function registerMaxWebhook() {
+  if (!APP_BASE_URL) {
+    throw new Error('APP_BASE_URL не задан');
+  }
+
+  const body = {
+    url: buildWebhookUrl(),
+    update_types: [
+      'bot_started',
+      'message_created',
+      'message_callback'
+    ]
+  };
+
+  console.log('🔗 Registering MAX webhook:', body);
+
+  const result = await maxRequest('/subscriptions', {
+    method: 'POST',
+    body
+  });
+
+  console.log('✅ MAX webhook registered:', JSON.stringify(result).slice(0, 1500));
+
+  return result;
+}
+
+async function getMaxSubscriptions() {
+  const result = await maxRequest('/subscriptions', {
+    method: 'GET'
+  });
+
+  console.log('📋 MAX subscriptions:', JSON.stringify(result).slice(0, 2000));
+
+  return result;
 }
 
 function normalizeMaxTarget(target) {
@@ -407,6 +466,13 @@ function getReplyTarget(update) {
     return {
       type: 'user_id',
       id: recipient.user_id
+    };
+  }
+
+  if (update?.chat_id) {
+    return {
+      type: 'chat_id',
+      id: update.chat_id
     };
   }
 
@@ -830,9 +896,7 @@ function isMemberActive(member) {
     'deleted'
   ];
 
-  if (negativeStatuses.includes(status)) {
-    return false;
-  }
+  if (negativeStatuses.includes(status)) return false;
 
   if (
     member?.is_member === false ||
@@ -850,9 +914,7 @@ function isMemberActive(member) {
 function extractMembersFromMaxResponse(body) {
   if (!body) return [];
 
-  if (Array.isArray(body)) {
-    return body;
-  }
+  if (Array.isArray(body)) return body;
 
   const candidates = [
     body.members,
@@ -879,26 +941,17 @@ function extractMembersFromMaxResponse(body) {
   for (const candidate of candidates) {
     if (!candidate) continue;
 
-    if (Array.isArray(candidate)) {
-      return candidate;
-    }
+    if (Array.isArray(candidate)) return candidate;
 
     if (typeof candidate === 'object') {
-      if (getMemberUserId(candidate)) {
-        return [candidate];
-      }
+      if (getMemberUserId(candidate)) return [candidate];
 
       const values = Object.values(candidate);
 
-      if (values.some(value => getMemberUserId(value))) {
-        return values;
-      }
+      if (values.some(value => getMemberUserId(value))) return values;
 
       const firstArray = values.find(Array.isArray);
-
-      if (firstArray) {
-        return firstArray;
-      }
+      if (firstArray) return firstArray;
     }
   }
 
@@ -911,7 +964,6 @@ function extractMembersFromMaxResponse(body) {
 
 function responseContainsActiveUser(body, userId) {
   const expectedUserId = String(userId);
-
   const rootUserId = getMemberUserId(body);
 
   if (rootUserId === expectedUserId && isMemberActive(body)) {
@@ -922,7 +974,6 @@ function responseContainsActiveUser(body, userId) {
 
   return members.some(member => {
     const memberUserId = getMemberUserId(member);
-
     return memberUserId === expectedUserId && isMemberActive(member);
   });
 }
@@ -980,13 +1031,8 @@ async function checkUserSubscribedToChannel(userId, channelId) {
     while (page < maxPages) {
       page += 1;
 
-      const query = {
-        count: pageSize
-      };
-
-      if (marker) {
-        query.marker = marker;
-      }
+      const query = { count: pageSize };
+      if (marker) query.marker = marker;
 
       const result = await maxRequest(path, {
         method: 'GET',
@@ -999,9 +1045,7 @@ async function checkUserSubscribedToChannel(userId, channelId) {
 
       const nextMarker = getNextMembersMarker(result);
 
-      if (!nextMarker || nextMarker === marker || seenMarkers.has(nextMarker)) {
-        break;
-      }
+      if (!nextMarker || nextMarker === marker || seenMarkers.has(nextMarker)) break;
 
       seenMarkers.add(nextMarker);
       marker = nextMarker;
@@ -1069,7 +1113,7 @@ function buildRaffleText(raffle, participantsCount = 0) {
     '',
     `🆔 ID розыгрыша: **${raffle.id}**`,
     '',
-    `Для участия отправьте боту команду:`,
+    'Для участия отправьте боту команду:',
     `/join_${raffle.id}`
   ].join('\n');
 }
@@ -1108,9 +1152,7 @@ async function publishRaffleToChannel(raffle, channelId) {
 async function activateRaffle(raffleId) {
   const raffle = await getRaffleById(raffleId);
 
-  if (!raffle || raffle.status !== 'scheduled') {
-    return;
-  }
+  if (!raffle || raffle.status !== 'scheduled') return;
 
   const channels = await getRaffleChannels(raffle.id);
 
@@ -1145,9 +1187,7 @@ async function activateRaffle(raffleId) {
 async function finishRaffle(raffleId) {
   const raffle = await getRaffleById(raffleId);
 
-  if (!raffle || !['active', 'scheduled'].includes(raffle.status)) {
-    return;
-  }
+  if (!raffle || !['active', 'scheduled'].includes(raffle.status)) return;
 
   const prizes = raffle.prizes
     ? raffle.prizes.split('\n').filter(Boolean)
@@ -1177,9 +1217,7 @@ async function finishRaffle(raffleId) {
       usedUsers.add(String(p.user_id));
     }
 
-    if (uniqueByUser.length >= neededCount) {
-      break;
-    }
+    if (uniqueByUser.length >= neededCount) break;
   }
 
   await saveWinners(raffle.id, uniqueByUser, prizes);
@@ -1324,9 +1362,7 @@ async function handleSessionMessage(message) {
   const text = message.text || '';
   const session = await getSession(userId);
 
-  if (!session) {
-    return false;
-  }
+  if (!session) return false;
 
   if (['/cancel', 'отмена', 'cancel'].includes(text.trim().toLowerCase())) {
     await clearSession(userId);
@@ -1734,6 +1770,17 @@ async function handleCallbackQuery(cb) {
 // =========================
 async function handleMaxUpdate(update) {
   try {
+    console.log('🔎 handleMaxUpdate:', {
+      update_type: update?.update_type,
+      chat_id: update?.chat_id,
+      text: update?.message?.body?.text,
+      payload: update?.payload,
+      callbackPayload: update?.callback?.payload,
+      sender: update?.message?.sender?.user_id,
+      callbackUser: update?.callback?.user?.user_id,
+      user: update?.user?.user_id
+    });
+
     const updateType = update?.update_type;
     const target = getReplyTarget(update);
     const userId = getStableUserId(update, target);
@@ -1782,9 +1829,7 @@ async function handleMaxUpdate(update) {
       return;
     }
 
-    if (updateType !== 'message_created') {
-      return;
-    }
+    if (updateType !== 'message_created') return;
 
     const message = normalizeMaxMessage(update);
 
@@ -1806,9 +1851,7 @@ async function handleMaxUpdate(update) {
 
     const handledBySession = await handleSessionMessage(message);
 
-    if (handledBySession) {
-      return;
-    }
+    if (handledBySession) return;
 
     if (text === '/start' || text.toLowerCase() === 'старт') {
       await sendWelcome(chatTarget, from.id);
@@ -1939,7 +1982,9 @@ app.get('/', (req, res) => {
   res.status(200).json({
     ok: true,
     service: 'MAX raffle bot',
-    webhook: '/webhook'
+    webhook: '/webhook',
+    appBaseUrl: APP_BASE_URL,
+    webhookUrl: buildWebhookUrl()
   });
 });
 
@@ -1956,6 +2001,88 @@ app.get('/health', async (req, res) => {
     res.status(500).json({
       ok: false,
       db: false,
+      error: error.message
+    });
+  }
+});
+
+app.get('/max-me', async (req, res) => {
+  try {
+    const setupSecret = process.env.SETUP_WEBHOOK_SECRET || '';
+
+    if (setupSecret && req.query.secret !== setupSecret) {
+      return res.status(403).json({
+        ok: false,
+        error: 'Forbidden'
+      });
+    }
+
+    const result = await getMaxMe();
+
+    res.json({
+      ok: true,
+      result
+    });
+  } catch (error) {
+    console.error('/max-me error:', error.message);
+
+    res.status(500).json({
+      ok: false,
+      error: error.message
+    });
+  }
+});
+
+app.get('/setup-webhook', async (req, res) => {
+  try {
+    const setupSecret = process.env.SETUP_WEBHOOK_SECRET || '';
+
+    if (setupSecret && req.query.secret !== setupSecret) {
+      return res.status(403).json({
+        ok: false,
+        error: 'Forbidden'
+      });
+    }
+
+    const result = await registerMaxWebhook();
+
+    res.json({
+      ok: true,
+      webhookUrl: buildWebhookUrl(),
+      result
+    });
+  } catch (error) {
+    console.error('/setup-webhook error:', error.message);
+
+    res.status(500).json({
+      ok: false,
+      error: error.message
+    });
+  }
+});
+
+app.get('/subscriptions', async (req, res) => {
+  try {
+    const setupSecret = process.env.SETUP_WEBHOOK_SECRET || '';
+
+    if (setupSecret && req.query.secret !== setupSecret) {
+      return res.status(403).json({
+        ok: false,
+        error: 'Forbidden'
+      });
+    }
+
+    const result = await getMaxSubscriptions();
+
+    res.json({
+      ok: true,
+      result
+    });
+  } catch (error) {
+    console.error('/subscriptions error:', error.message);
+
+    res.status(500).json({
+      ok: false,
       error: error.message
     });
   }
@@ -2018,10 +2145,12 @@ app.post(['/', '/webhook'], (req, res) => {
   console.log('📩 WEBHOOK RECEIVED:', {
     path: req.path,
     time: new Date().toISOString(),
+    update_type: req.body?.update_type,
+    hasUpdates: Array.isArray(req.body?.updates),
     contentType: req.get('Content-Type'),
     userAgent: req.get('User-Agent'),
     hasBody: Boolean(req.body && Object.keys(req.body).length),
-    bodyPreview: JSON.stringify(req.body || {}).slice(0, 1000)
+    bodyPreview: JSON.stringify(req.body || {}).slice(0, 1500)
   });
 
   if (MAX_WEBHOOK_SECRET) {
@@ -2186,6 +2315,16 @@ async function startServer() {
 
     await createTablesIfNotExist();
 
+    await getMaxMe().catch(error => {
+      console.warn('⚠️ MAX /me check failed:', error.message);
+    });
+
+    if (String(process.env.AUTO_REGISTER_WEBHOOK || 'false').toLowerCase() === 'true') {
+      await registerMaxWebhook().catch(error => {
+        console.warn('⚠️ Auto webhook registration failed:', error.message);
+      });
+    }
+
     setInterval(() => {
       processQueue().catch(error => {
         console.error('processQueue interval error:', error.message);
@@ -2200,10 +2339,13 @@ async function startServer() {
 
     app.listen(PORT, '0.0.0.0', () => {
       console.log(`✅ MAX raffle bot is running on port ${PORT}`);
+      console.log(`🌐 APP_BASE_URL=${APP_BASE_URL}`);
+      console.log(`🔗 Webhook URL=${buildWebhookUrl()}`);
     });
   } catch (error) {
     console.error('❌ Failed to start server:', error);
     process.exit(1);
   }
 }
+
 startServer();
