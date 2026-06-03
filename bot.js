@@ -8,15 +8,16 @@ const dayjs = require('dayjs');
 const app = express();
 app.use(bodyParser.json());
 
-// Подключение к Render Internal Database
+// DATABASE_URL берётся из Render Internal Database (или External, если локально)
 const pool = new Pool({
-  host: process.env.DB_INTERNAL_HOST || 'dpg-d8g6rml8nd3s739a65rg-a', // Internal hostname Render
-  port: Number(process.env.DB_PORT || 5432),
-  database: process.env.DB_NAME || 'dbgiftmax',
-  user: process.env.DB_USER || 'dbgiftmax_user',
-  password: process.env.DB_PASSWORD,  // Обязательный! пароль, который Render выдал
-  ssl: { rejectUnauthorized: false }  // Render требует SSL даже для Internal DB
+  connectionString: process.env.DATABASE_URL,
+  ssl: { rejectUnauthorized: false } // Render Internal требует SSL
 });
+
+// Проверка подключения
+pool.query('SELECT NOW()')
+  .then(res => console.log('✅ Connected to PostgreSQL via DATABASE_URL, time:', res.rows[0]))
+  .catch(err => console.error('❌ DB connection error:', err));
 
 const PORT = process.env.PORT || 3000;
 const MAX_BOT_TOKEN = process.env.MAX_BOT_TOKEN;
