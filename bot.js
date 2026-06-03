@@ -45,6 +45,15 @@ if (
 const GENERAL_CHANNEL_ID = process.env.GENERAL_CHANNEL_ID || '';
 const CHECK_INTERVAL_SECONDS = Number(process.env.CHECK_INTERVAL_SECONDS || 30);
 
+const BOT_PUBLIC_URL = String(
+  process.env.BOT_PUBLIC_URL ||
+  process.env.MAX_BOT_LINK ||
+  process.env.BOT_LINK ||
+  APP_BASE_URL
+).replace(/\/+$/, '');
+
+const BOT_BRAND_NAME = process.env.BOT_BRAND_NAME || 'РОЗЫГРЫШ БОТ';
+
 const ADMIN_IDS = new Set(
   String(process.env.ADMIN_IDS || process.env.ADMIN_USER_IDS || process.env.ADMIN_USER_ID || '')
     .split(',')
@@ -391,6 +400,596 @@ function extractMaxMessageId(result) {
   return found ? String(found) : null;
 }
 
+function safeCallbackPart(value) {
+  return encodeURIComponent(String(value || '').trim());
+}
+
+function unsafeCallbackPart(value) {
+  return decodeURIComponent(String(value || '').trim());
+}
+
+function truncateButtonText(text, max = 42) {
+  const clean = String(text || '').replace(/\s+/g, ' ').trim();
+  return clean.length > max ? `${clean.slice(0, max - 1)}…` : clean;
+}
+
+function markdownLink(text, url) {
+  const cleanText = String(text || '').replace(/[\[\]\n\r]/g, ' ').trim();
+  const cleanUrl = String(url || '').trim();
+
+  if (!cleanUrl) return cleanText || 'Канал';
+
+  return `[${cleanText || 'Канал'}](${cleanUrl})`;
+}
+
+function formatChannelName(channel) {
+  return String(
+    channel?.channel_title ||
+    channel?.title ||
+    channel?.name ||
+    'Канал'
+  ).trim() || 'Канал';
+}
+
+function formatChannelWithLink(channel) {
+  const title = formatChannelName(channel);
+  const link = String(channel?.channel_link || channel?.link || '').trim();
+
+  return link ? markdownLink(title, link) : title;
+}
+
+function buildBotDeepLink(payload = '') {
+  const base = BOT_PUBLIC_URL || APP_BASE_URL;
+  const cleanPayload = String(payload || '').trim();
+
+  if (!cleanPayload) return base;
+
+  const separator = base.includes('?') ? '&' : '?';
+
+  return `${base}${separator}start=${encodeURIComponent(cleanPayload)}`;
+}
+
+function buildBotBrandKeyboard(extraRows = []) {
+  const rows = [...extraRows];
+
+  if (BOT_PUBLIC_URL) {
+    rows.push([
+      {
+        text: BOT_BRAND_NAME,
+        url: BOT_PUBLIC_URL
+      }
+    ]);
+  }
+
+  return rows;
+}
+
+function buildRaffleInviteLink(token) {
+  return `${APP_BASE_URL}/collab/${encodeURIComponent(String(token))}`;
+}
+
+function buildJoinLink(raffleId, ref = '') {
+  const query = ref ? `?ref=${encodeURIComponent(String(ref))}` : '';
+  return `${APP_BASE_URL}/join/${raffleId}${query}`;
+}
+
+function isChatTarget(target) {
+  return target && target.type === 'chat_id' && String(target.id || '').trim();
+}
+
+function extractChatTitleFromUpdate(update, chatId = '') {
+  const candidates = [
+    update?.message?.recipient?.chat_title,
+    update?.message?.recipient?.title,
+    update?.message?.recipient?.name,
+    update?.message?.chat?.title,
+    update?.message?.chat?.name,
+    update?.chat?.title,
+    update?.chat?.name,
+    update?.recipient?.chat_title,
+    update?.recipient?.title,
+    update?.recipient?.name,
+    update?.callback?.message?.recipient?.chat_title,
+    update?.callback?.message?.recipient?.title,
+    update?.callback?.message?.chat?.title
+  ];
+
+  for (const value of candidates) {
+    const text = String(value || '').trim();
+    if (text) return text;
+  }
+
+  return chatId ? `Канал ${chatId}` : 'Канал';
+}
+
+function extractChatLinkFromObject(obj) {
+  if (!obj || typeof obj !== 'object') return '';
+
+  const candidates = [
+    obj.link,
+    obj.url,
+    obj.web_url,
+    obj.webUrl,
+    obj.public_link,
+    obj.publicLink,
+    obj.invite_link,
+    obj.inviteLink,
+    obj.chat_link,
+    obj.chatLink,
+    obj.result?.link,
+    obj.result?.url,
+    obj.result?.web_url,
+    obj.result?.public_link,
+    obj.payload?.link,
+    obj.payload?.url,
+    obj.payload?.web_url,
+    obj.payload?.public_link
+  ];
+
+  for (const value of candidates) {
+    const text = String(value || '').trim();
+    if (text.startsWith('http://') || text.startsWith('https://')) return text;
+  }
+
+  const username = String(
+    obj.username ||
+    obj.login ||
+    obj.screen_name ||
+    obj.screenName ||
+    obj.result?.username ||
+    obj.result?.login ||
+    obj.payload?.username ||
+    ''
+  ).replace(/^@/, '').trim();
+
+  if (username) return `https://max.ru/${username}`;
+
+  return '';
+}
+
+function extractChatLinkFromUpdate(update) {
+  return extractChatLinkFromObject(update?.message?.recipient) ||
+    extractChatLinkFromObject(update?.message?.chat) ||
+    extractChatLinkFromObject(update?.chat) ||
+    extractChatLinkFromObject(update?.recipient) ||
+    extractChatLinkFromObject(update?.callback?.message?.recipient) ||
+    '';
+}
+
+async function getChatInfoSafe(chatId) {
+  const encodedChatId = encodeURIComponent(String(chatId).trim());
+
+  try {
+    const result = await maxRequest(`/chats/${encodedChatId}`, {
+      method: 'GET'
+    });
+
+    return result;
+  } catch (error) {
+    console.warn(`Не удалось получить информацию о чате ${chatId}:`, error.message);
+    return null;
+  }
+}
+
+function extractTitleFromChatInfo(info) {
+  if (!info) return '';
+
+  const candidates = [
+    info.title,
+    info.name,
+    info.chat_title,
+    info.chat?.title,
+    info.chat?.name,
+    info.result?.title,
+    info.result?.name,
+    info.payload?.title,
+    info.payload?.name
+  ];
+
+  for (const value of candidates) {
+    const text = String(value || '').trim();
+    if (text) return text;
+  }
+
+  return '';
+}
+
+async function resolveChannelMeta(channelId, update = null) {
+  const info = await getChatInfoSafe(channelId);
+
+  return {
+    title: extractTitleFromChatInfo(info) ||
+      extractChatTitleFromUpdate(update, channelId),
+    link: extractChatLinkFromObject(info) ||
+      extractChatLinkFromUpdate(update)
+  };
+}
+
+async function upsertUserChannel(ownerUserId, channelId, channelTitle, channelLink = '', addedByUserId = null, canPublish = true) {
+  const title = safeText(channelTitle || `Канал ${channelId}`, 255);
+  const link = safeText(channelLink || '', 1000);
+
+  const res = await pool.query(`
+    INSERT INTO user_channels (
+      owner_user_id,
+      channel_id,
+      channel_title,
+      channel_link,
+      added_by_user_id,
+      can_publish,
+      is_active,
+      updated_at
+    )
+    VALUES ($1, $2, $3, $4, $5, $6, true, NOW())
+    ON CONFLICT (owner_user_id, channel_id)
+    DO UPDATE SET
+      channel_title = EXCLUDED.channel_title,
+      channel_link = COALESCE(NULLIF(EXCLUDED.channel_link, ''), user_channels.channel_link),
+      added_by_user_id = EXCLUDED.added_by_user_id,
+      can_publish = EXCLUDED.can_publish,
+      is_active = true,
+      updated_at = NOW()
+    RETURNING *
+  `, [
+    ownerUserId,
+    channelId,
+    title,
+    link,
+    addedByUserId || ownerUserId,
+    canPublish
+  ]);
+
+  return res.rows[0];
+}
+
+async function getUserChannels(userId) {
+  const res = await pool.query(`
+    SELECT *
+    FROM user_channels
+    WHERE owner_user_id = $1
+      AND is_active = true
+    ORDER BY updated_at DESC, id DESC
+  `, [userId]);
+
+  return res.rows;
+}
+
+async function getUserChannel(userId, channelId) {
+  const res = await pool.query(`
+    SELECT *
+    FROM user_channels
+    WHERE owner_user_id = $1
+      AND channel_id = $2
+      AND is_active = true
+    LIMIT 1
+  `, [userId, channelId]);
+
+  return res.rows[0] || null;
+}
+
+async function sendAddChannelInstruction(target) {
+  return sendMessage(
+    target,
+    [
+      '➕ **Добавить канал**',
+      '',
+      'Чтобы бот мог публиковать розыгрыш в вашем канале:',
+      '',
+      '1. Добавьте бота в подписчики канала.',
+      '2. Выдайте боту права администратора на размещение постов.',
+      '3. В самом канале отправьте сообщение: **Подключить канал**.',
+      '',
+      'После этого канал появится в разделе **Мои каналы** и будет доступен при создании розыгрыша.',
+      '',
+      'ID канала вводить не нужно — бот получит его автоматически.'
+    ].join('\n'),
+    [
+      [{ text: '📢 Мои каналы', callback_data: 'my_channels' }],
+      [{ text: '🏠 Главное меню', callback_data: 'main_menu' }]
+    ]
+  );
+}
+
+async function sendMyChannels(target, userId) {
+  const channels = await getUserChannels(userId);
+
+  if (!channels.length) {
+    return sendMessage(
+      target,
+      [
+        '📢 **Мои каналы**',
+        '',
+        'Пока нет подключённых каналов.',
+        '',
+        'Добавьте бота в канал, дайте ему права администратора на публикацию постов и отправьте в этом канале сообщение: **Подключить канал**.'
+      ].join('\n'),
+      [
+        [{ text: '➕ Добавить канал', callback_data: 'add_channel' }],
+        [{ text: '🏠 Главное меню', callback_data: 'main_menu' }]
+      ]
+    );
+  }
+
+  let text = '📢 **Мои каналы**\n\n';
+
+  for (const ch of channels) {
+    text += `• ${formatChannelWithLink(ch)}\n`;
+  }
+
+  text += '\nЭти каналы можно выбрать при создании розыгрыша.';
+
+  return sendMessage(
+    target,
+    text,
+    [
+      [{ text: '➕ Добавить канал', callback_data: 'add_channel' }],
+      [{ text: '🎉 Создать розыгрыш', callback_data: 'create_raffle' }],
+      [{ text: '🏠 Главное меню', callback_data: 'main_menu' }]
+    ]
+  );
+}
+
+function getSelectedChannelsFromSession(data) {
+  if (!Array.isArray(data.channels)) data.channels = [];
+  return data.channels;
+}
+
+function findSelectedChannel(data, channelId) {
+  const id = String(channelId);
+  return getSelectedChannelsFromSession(data).find(ch => String(ch.channel_id) === id);
+}
+
+function selectedChannelIndex(data, channelId) {
+  const id = String(channelId);
+  return getSelectedChannelsFromSession(data).findIndex(ch => String(ch.channel_id) === id);
+}
+
+async function sendChannelSelectionMenu(target, userId, data, mode = 'create') {
+  const userChannels = await getUserChannels(userId);
+  const selected = getSelectedChannelsFromSession(data);
+
+  let text = mode === 'collab'
+    ? '🤝 **Каналы для совместного розыгрыша**\n\n'
+    : '📢 **Каналы для розыгрыша**\n\n';
+
+  text += 'Выберите каналы из списка ниже. Для каждого канала можно отдельно включить:\n';
+  text += '✅ обязательную подписку;\n';
+  text += '📣 размещение поста с розыгрышем.\n\n';
+
+  if (!userChannels.length) {
+    text += 'У вас пока нет подключённых каналов.\n';
+    text += 'Сначала добавьте бота в канал, дайте права администратора и отправьте в канале сообщение: **Подключить канал**.';
+  } else if (!selected.length) {
+    text += 'Каналы пока не выбраны. Можно продолжить без каналов или выбрать канал ниже.';
+  } else {
+    text += '**Выбрано:**\n';
+
+    for (const ch of selected) {
+      text += `• ${formatChannelWithLink(ch)} — `;
+      text += `${ch.is_required ? 'обязательная подписка' : 'подписка не обязательна'}, `;
+      text += `${ch.publish_post ? 'с размещением' : 'без размещения'}\n`;
+    }
+  }
+
+  const keyboard = [];
+
+  for (const ch of userChannels) {
+    const stored = findSelectedChannel(data, ch.channel_id);
+    const id = safeCallbackPart(ch.channel_id);
+    const title = truncateButtonText(formatChannelName(ch), 34);
+
+    keyboard.push([
+      {
+        text: `${stored ? '✅' : '➕'} ${title}`,
+        callback_data: `${mode === 'collab' ? 'collab_ch_toggle' : 'raffle_ch_toggle'}:${id}`
+      }
+    ]);
+
+    if (stored) {
+      keyboard.push([
+        {
+          text: stored.is_required ? '✅ Обязательная подписка' : '☑️ Подписка не обязательна',
+          callback_data: `${mode === 'collab' ? 'collab_ch_req' : 'raffle_ch_req'}:${id}`
+        },
+        {
+          text: stored.publish_post ? '📣 С размещением' : '🙈 Без размещения',
+          callback_data: `${mode === 'collab' ? 'collab_ch_pub' : 'raffle_ch_pub'}:${id}`
+        }
+      ]);
+    }
+  }
+
+  keyboard.push([{ text: '➕ Добавить канал', callback_data: 'add_channel' }]);
+  keyboard.push([{ text: mode === 'collab' ? '✅ Добавить к розыгрышу' : '➡️ Создать розыгрыш', callback_data: mode === 'collab' ? 'collab_channels_done' : 'raffle_channels_done' }]);
+  keyboard.push([{ text: '❌ Отмена', callback_data: 'cancel_session' }]);
+
+  return sendMessage(target, text, keyboard);
+}
+
+async function toggleSessionChannel(userId, channelId) {
+  const session = await getSession(userId);
+
+  if (!session) return null;
+
+  const data = typeof session.data === 'string'
+    ? JSON.parse(session.data || '{}')
+    : session.data || {};
+
+  const channel = await getUserChannel(userId, channelId);
+
+  if (!channel) return { session, data, missing: true };
+
+  const idx = selectedChannelIndex(data, channelId);
+
+  if (idx >= 0) {
+    data.channels.splice(idx, 1);
+  } else {
+    getSelectedChannelsFromSession(data).push({
+      channel_id: String(channel.channel_id),
+      channel_title: channel.channel_title,
+      channel_link: channel.channel_link,
+      is_required: true,
+      publish_post: true,
+      owner_user_id: userId
+    });
+  }
+
+  await setSession(userId, session.state, data);
+
+  return { session, data };
+}
+
+async function toggleSessionChannelFlag(userId, channelId, flag) {
+  const session = await getSession(userId);
+
+  if (!session) return null;
+
+  const data = typeof session.data === 'string'
+    ? JSON.parse(session.data || '{}')
+    : session.data || {};
+
+  const selected = findSelectedChannel(data, channelId);
+
+  if (!selected) return { session, data, missing: true };
+
+  selected[flag] = !selected[flag];
+
+  await setSession(userId, session.state, data);
+
+  return { session, data };
+}
+
+async function createRaffleFromSession(userId, data) {
+  const raffle = await createRaffleDraft(userId);
+
+  await updateRaffle(raffle.id, {
+    title: data.title,
+    description: data.description,
+    prizes: data.prizes,
+    prize_count: data.prize_count,
+    end_at: data.end_at,
+    publish_in_general: false,
+    status: 'scheduled'
+  });
+
+  for (const ch of data.channels || []) {
+    await addRaffleChannel(
+      raffle.id,
+      ch.channel_id,
+      ch.channel_title,
+      ch.is_required,
+      ch.publish_post,
+      ch.channel_link,
+      ch.owner_user_id || userId
+    );
+  }
+
+  const inviteToken = await createRaffleInvite(raffle.id, userId);
+
+  await addQueue(raffle.id, 'raffle_start', new Date());
+  await addQueue(raffle.id, 'raffle_finish', new Date(data.end_at));
+
+  return { raffle, inviteToken };
+}
+
+async function createRaffleInvite(raffleId, userId) {
+  const token = crypto.randomBytes(18).toString('hex');
+
+  await pool.query(`
+    INSERT INTO raffle_invites (raffle_id, token, invited_by_user_id)
+    VALUES ($1, $2, $3)
+  `, [raffleId, token, userId]);
+
+  return token;
+}
+
+async function getRaffleInviteByToken(token) {
+  const res = await pool.query(`
+    SELECT *
+    FROM raffle_invites
+    WHERE token = $1
+    LIMIT 1
+  `, [token]);
+
+  return res.rows[0] || null;
+}
+
+async function startCollabFlow(target, userId, token) {
+  const invite = await getRaffleInviteByToken(token);
+
+  if (!invite) {
+    return sendMessage(target, 'Ссылка для совместного розыгрыша недействительна или устарела.');
+  }
+
+  const raffle = await getRaffleById(invite.raffle_id);
+
+  if (!raffle || !['scheduled', 'active'].includes(raffle.status)) {
+    return sendMessage(target, 'Этот розыгрыш уже недоступен для подключения каналов.');
+  }
+
+  await setSession(userId, 'collab_channel_selection', {
+    raffle_id: raffle.id,
+    invite_token: token,
+    channels: []
+  });
+
+  return sendChannelSelectionMenu(target, userId, {
+    raffle_id: raffle.id,
+    invite_token: token,
+    channels: []
+  }, 'collab');
+}
+
+async function addCollabChannelsFromSession(target, userId, data) {
+  const raffle = await getRaffleById(data.raffle_id);
+
+  if (!raffle || !['scheduled', 'active'].includes(raffle.status)) {
+    await clearSession(userId);
+    return sendMessage(target, 'Этот розыгрыш уже недоступен для подключения каналов.');
+  }
+
+  const channels = data.channels || [];
+
+  if (!channels.length) {
+    return sendMessage(target, 'Выберите хотя бы один канал или отмените подключение.');
+  }
+
+  for (const ch of channels) {
+    await addRaffleChannel(
+      raffle.id,
+      ch.channel_id,
+      ch.channel_title,
+      ch.is_required,
+      ch.publish_post,
+      ch.channel_link,
+      userId
+    );
+
+    if (raffle.status === 'active' && ch.publish_post) {
+      await publishRaffleToChannel(raffle, ch.channel_id).catch(error => {
+        console.warn(`Не удалось сразу опубликовать в канале ${ch.channel_id}:`, error.message);
+      });
+    }
+  }
+
+  await clearSession(userId);
+
+  return sendMessage(
+    target,
+    [
+      '✅ Каналы добавлены к совместному розыгрышу.',
+      '',
+      `Розыгрыш: **${raffle.title}**`,
+      '',
+      'Теперь условия подписки и размещения будут учитываться в этом розыгрыше.'
+    ].join('\n'),
+    [
+      [{ text: '📊 Статистика розыгрыша', callback_data: `raffle_stats:${raffle.id}` }],
+      [{ text: '🏠 Главное меню', callback_data: 'main_menu' }]
+    ]
+  );
+}
+
 // =========================
 // MAX update parser
 // =========================
@@ -572,7 +1171,7 @@ function normalizeMaxCallback(update) {
 // =========================
 async function sendWelcome(target, userId) {
   const adminLine = isAdmin(userId)
-    ? '\n\n👑 Вам доступна админ-панель: /admin'
+    ? '\n\n👑 Вам доступна админ-панель в главном меню.'
     : '';
 
   return sendMessage(
@@ -580,21 +1179,9 @@ async function sendWelcome(target, userId) {
     [
       '👋 **Привет! Я бот для честных розыгрышей в MAX.**',
       '',
-      'Что я умею:',
-      '🎉 создавать розыгрыши;',
-      '📢 публиковать их в каналы;',
-      '✅ проверять обязательные подписки;',
-      '🎟 выдавать билеты участникам;',
-      '🔗 делать реферальные ссылки;',
-      '🏆 автоматически выбирать победителей;',
-      '📊 показывать статистику.',
+      'Через меню можно создать розыгрыш, подключить свои каналы, включить обязательную подписку, разместить пост в канале и смотреть статистику.',
       '',
-      '**Команды:**',
-      '/create — создать розыгрыш',
-      '/my — мои розыгрыши',
-      '/join — участвовать в последнем розыгрыше',
-      '/stat — общая статистика',
-      '/cancel — отменить создание',
+      'Чтобы публиковать розыгрыши в канале, сначала добавьте бота в подписчики канала и выдайте ему права администратора на размещение постов.',
       adminLine
     ].join('\n')
   );
@@ -603,6 +1190,10 @@ async function sendWelcome(target, userId) {
 async function sendMainMenu(target, userId = null) {
   const keyboard = [
     [{ text: '🎉 Создать розыгрыш', callback_data: 'create_raffle' }],
+    [
+      { text: '➕ Добавить канал', callback_data: 'add_channel' },
+      { text: '📢 Мои каналы', callback_data: 'my_channels' }
+    ],
     [{ text: '🔎 Мои розыгрыши', callback_data: 'my_raffles' }],
     [{ text: '🎁 Участвовать', callback_data: 'join_latest' }],
     [{ text: '📊 Статистика', callback_data: 'stats_global' }]
@@ -734,11 +1325,36 @@ async function getUserRaffles(userId) {
   return res.rows;
 }
 
-async function addRaffleChannel(raffleId, channelId, channelTitle, isRequired = true, publishPost = true) {
+async function addRaffleChannel(
+  raffleId,
+  channelId,
+  channelTitle,
+  isRequired = true,
+  publishPost = true,
+  channelLink = '',
+  ownerUserId = null
+) {
   await pool.query(`
-    INSERT INTO raffle_channels (raffle_id, channel_id, channel_title, is_required, publish_post)
-    VALUES ($1, $2, $3, $4, $5)
-  `, [raffleId, channelId, channelTitle, isRequired, publishPost]);
+    INSERT INTO raffle_channels (
+      raffle_id,
+      channel_id,
+      channel_title,
+      channel_link,
+      owner_user_id,
+      is_required,
+      publish_post
+    )
+    VALUES ($1, $2, $3, $4, $5, $6, $7)
+    ON CONFLICT DO NOTHING
+  `, [
+    raffleId,
+    channelId,
+    safeText(channelTitle || `Канал ${channelId}`, 255),
+    safeText(channelLink || '', 1000),
+    ownerUserId,
+    isRequired,
+    publishPost
+  ]);
 }
 
 async function getRaffleChannels(raffleId) {
@@ -1111,10 +1727,9 @@ function buildRaffleText(raffle, participantsCount = 0) {
     `🏆 Призовых мест: **${raffle.prize_count || 1}**`,
     `⏰ Окончание: **${dayjs(raffle.end_at).format('DD.MM.YYYY HH:mm')}**`,
     '',
-    `🆔 ID розыгрыша: **${raffle.id}**`,
+    'Чтобы участвовать, нажмите кнопку ниже.',
     '',
-    'Для участия отправьте боту команду:',
-    `/join_${raffle.id}`
+    `Розыгрыш создан с помощью **${BOT_BRAND_NAME}**`
   ].join('\n');
 }
 
@@ -1134,9 +1749,9 @@ async function publishRaffleToChannel(raffle, channelId) {
       id: channelId
     },
     text,
-    [
+    buildBotBrandKeyboard([
       [{ text: '🎁 Участвовать', callback_data: `join_raffle:${raffle.id}` }]
-    ]
+    ])
   );
 
   const messageId = extractMaxMessageId(data);
@@ -1338,7 +1953,7 @@ async function sendRaffleStats(target, raffleId) {
     text += 'Каналы не указаны.\n';
   } else {
     for (const ch of channels) {
-      text += `• ${ch.channel_title || ch.channel_id}\n`;
+      text += `• ${formatChannelWithLink(ch)}\n`;
     }
   }
 
@@ -1366,7 +1981,7 @@ async function handleSessionMessage(message) {
 
   if (['/cancel', 'отмена', 'cancel'].includes(text.trim().toLowerCase())) {
     await clearSession(userId);
-    await sendMessage(target, 'Создание розыгрыша отменено.');
+    await sendMessage(target, 'Действие отменено.');
     await sendMainMenu(target, userId);
     return true;
   }
@@ -1438,85 +2053,21 @@ async function handleSessionMessage(message) {
     }
 
     data.end_at = parsed.toISOString();
+    data.channels = [];
 
-    await setSession(userId, 'await_channels', data);
-
-    await sendMessage(
-      target,
-      [
-        'Введите ID обязательных каналов через запятую.',
-        'Если каналов нет — отправьте `0`.',
-        '',
-        'Пример:',
-        '`-73970192098593,-72952296540698`'
-      ].join('\n')
-    );
+    await setSession(userId, 'await_channel_selection', data);
+    await sendChannelSelectionMenu(target, userId, data, 'create');
 
     return true;
   }
 
-  if (state === 'await_channels') {
-    const raw = text.trim();
-
-    const channelIds = raw === '0'
-      ? []
-      : raw
-          .split(',')
-          .map(x => x.trim())
-          .filter(Boolean)
-          .filter(x => /^-?\d+$/.test(x));
-
-    if (raw !== '0' && !channelIds.length) {
-      await sendMessage(target, 'Введите корректные ID каналов через запятую или `0`, если каналов нет.');
-      return true;
-    }
-
-    data.channels = channelIds;
-
-    await setSession(userId, 'await_publish_general', data);
-    await sendMessage(target, 'Публиковать в общем канале? Напишите: `да` или `нет`');
+  if (state === 'await_channel_selection') {
+    await sendChannelSelectionMenu(target, userId, data, 'create');
     return true;
   }
 
-  if (state === 'await_publish_general') {
-    const publishGeneral = ['да', 'yes', 'y', '1', '+'].includes(text.trim().toLowerCase());
-    data.publish_in_general = publishGeneral;
-
-    const raffle = await createRaffleDraft(userId);
-
-    await updateRaffle(raffle.id, {
-      title: data.title,
-      description: data.description,
-      prizes: data.prizes,
-      prize_count: data.prize_count,
-      end_at: data.end_at,
-      publish_in_general: publishGeneral,
-      status: 'scheduled'
-    });
-
-    for (const chId of data.channels || []) {
-      await addRaffleChannel(raffle.id, chId, `Канал ${chId}`, true, true);
-    }
-
-    await addQueue(raffle.id, 'raffle_start', new Date());
-    await addQueue(raffle.id, 'raffle_finish', new Date(data.end_at));
-
-    await clearSession(userId);
-
-    await sendMessage(
-      target,
-      [
-        '✅ **Розыгрыш создан!**',
-        `ID: **${raffle.id}**`,
-        `Название: **${data.title}**`,
-        `Окончание: **${dayjs(data.end_at).format('DD.MM.YYYY HH:mm')}**`,
-        '',
-        `Команда участия: /join_${raffle.id}`,
-        `Статистика: /stat_${raffle.id}`,
-        `Завершить вручную: /pick_${raffle.id}`
-      ].join('\n')
-    );
-
+  if (state === 'collab_channel_selection') {
+    await sendChannelSelectionMenu(target, userId, data, 'collab');
     return true;
   }
 
@@ -1547,12 +2098,16 @@ async function joinRaffle(target, userId, raffleId, invitedBy = null) {
     let text = '❌ Для участия нужно подписаться на обязательные каналы:\n\n';
 
     for (const ch of sub.missing) {
-      text += `• ${ch.channel_title || ch.channel_id}\n`;
+      text += `• ${formatChannelWithLink(ch)}\n`;
     }
 
-    text += '\nПосле подписки снова нажмите участие.';
+    text += '\nПосле подписки снова нажмите кнопку участия.';
 
-    return sendMessage(target, text);
+    return sendMessage(
+      target,
+      text,
+      [[{ text: '✅ Я подписался, участвовать', callback_data: `join_raffle:${raffle.id}` }]]
+    );
   }
 
   const entry = await createParticipantEntry(raffle.id, userId, invitedBy);
@@ -1561,7 +2116,7 @@ async function joinRaffle(target, userId, raffleId, invitedBy = null) {
     return sendMessage(target, `✅ Вы уже участвуете в розыгрыше #${raffle.id}.`);
   }
 
-  const refLink = `${APP_BASE_URL}/join/${raffle.id}?ref=${userId}`;
+  const refLink = buildJoinLink(raffle.id, userId);
 
   return sendMessage(
     target,
@@ -1574,7 +2129,8 @@ async function joinRaffle(target, userId, raffleId, invitedBy = null) {
       refLink,
       '',
       'За приглашённых участников можно получать дополнительные билеты.'
-    ].join('\n')
+    ].join('\n'),
+    buildBotBrandKeyboard()
   );
 }
 
@@ -1610,16 +2166,12 @@ async function sendAdminPanel(target, userId) {
     [
       '👑 **Админ-панель**',
       '',
-      '/admin_stats — глобальная статистика',
-      '/admin_active — активные розыгрыши',
-      '/pick_ID — завершить розыгрыш и выбрать победителей',
-      '',
-      'Пример:',
-      '`/pick_15`'
+      'Управление доступно через кнопки ниже.'
     ].join('\n'),
     [
       [{ text: '📊 Статистика', callback_data: 'admin_stats' }],
-      [{ text: '🔥 Активные розыгрыши', callback_data: 'admin_active' }]
+      [{ text: '🔥 Активные розыгрыши', callback_data: 'admin_active' }],
+      [{ text: '🏠 Главное меню', callback_data: 'main_menu' }]
     ]
   );
 }
@@ -1675,23 +2227,86 @@ async function sendAdminActiveRaffles(target, userId) {
   }
 
   let text = '🔥 **Активные и запланированные розыгрыши:**\n\n';
+  const keyboard = [];
 
   for (const r of res.rows) {
     text += `#${r.id} | ${r.title} | ${r.status} | до ${dayjs(r.end_at).format('DD.MM.YYYY HH:mm')}\n`;
-    text += `Создатель: ${r.creator_user_id}\n`;
-    text += `Завершить: /pick_${r.id}\n\n`;
+    text += `Создатель: ${r.creator_user_id}\n\n`;
+
+    keyboard.push([
+      { text: `📊 #${r.id}`, callback_data: `raffle_stats:${r.id}` },
+      { text: `🏆 Завершить #${r.id}`, callback_data: `pick_raffle:${r.id}` }
+    ]);
   }
 
-  return sendMessage(target, text);
+  keyboard.push([{ text: '🏠 Главное меню', callback_data: 'main_menu' }]);
+
+  return sendMessage(target, text, keyboard);
 }
 
 // =========================
 // Callback
 // =========================
+async function sendUserRaffles(target, userId) {
+  const raffles = await getUserRaffles(userId);
+
+  if (!raffles.length) {
+    return sendMessage(
+      target,
+      'У вас пока нет розыгрышей.',
+      [[{ text: '🎉 Создать розыгрыш', callback_data: 'create_raffle' }]]
+    );
+  }
+
+  let text = '🔎 **Ваши розыгрыши:**\n\n';
+  const keyboard = [];
+
+  for (const r of raffles) {
+    text += `#${r.id} | ${r.title} | ${r.status} | до ${dayjs(r.end_at).format('DD.MM.YYYY HH:mm')}\n\n`;
+
+    const row = [
+      { text: `📊 #${r.id}`, callback_data: `raffle_stats:${r.id}` }
+    ];
+
+    if (['scheduled', 'active'].includes(r.status)) {
+      row.push({ text: `🏆 Завершить`, callback_data: `pick_raffle:${r.id}` });
+    }
+
+    keyboard.push(row);
+  }
+
+  keyboard.push([{ text: '🎉 Создать розыгрыш', callback_data: 'create_raffle' }]);
+  keyboard.push([{ text: '🏠 Главное меню', callback_data: 'main_menu' }]);
+
+  return sendMessage(target, text, keyboard);
+}
+
 async function handleCallbackQuery(cb) {
   const userId = cb.from.id;
   const target = cb.message.chat.id;
   const data = cb.data;
+
+  if (data === 'main_menu') {
+    await sendMainMenu(target, userId);
+    return;
+  }
+
+  if (data === 'cancel_session') {
+    await clearSession(userId);
+    await sendMessage(target, 'Действие отменено.');
+    await sendMainMenu(target, userId);
+    return;
+  }
+
+  if (data === 'add_channel') {
+    await sendAddChannelInstruction(target);
+    return;
+  }
+
+  if (data === 'my_channels') {
+    await sendMyChannels(target, userId);
+    return;
+  }
 
   if (data === 'create_raffle') {
     await setSession(userId, 'await_title', {});
@@ -1700,22 +2315,148 @@ async function handleCallbackQuery(cb) {
   }
 
   if (data === 'my_raffles') {
-    const raffles = await getUserRaffles(userId);
+    await sendUserRaffles(target, userId);
+    return;
+  }
 
-    if (!raffles.length) {
-      await sendMessage(target, 'У вас пока нет розыгрышей.');
+  if (data.startsWith('raffle_ch_toggle:')) {
+    const channelId = unsafeCallbackPart(data.split(':')[1] || '');
+    const result = await toggleSessionChannel(userId, channelId);
+
+    if (!result || result.missing) {
+      await sendMessage(target, 'Канал не найден в разделе «Мои каналы».');
       return;
     }
 
-    let text = '🔎 **Ваши розыгрыши:**\n\n';
+    await sendChannelSelectionMenu(target, userId, result.data, 'create');
+    return;
+  }
 
-    for (const r of raffles) {
-      text += `#${r.id} | ${r.title} | ${r.status} | до ${dayjs(r.end_at).format('DD.MM.YYYY HH:mm')}\n`;
-      text += `Статистика: /stat_${r.id}\n`;
-      text += `Завершить: /pick_${r.id}\n\n`;
+  if (data.startsWith('raffle_ch_req:')) {
+    const channelId = unsafeCallbackPart(data.split(':')[1] || '');
+    const result = await toggleSessionChannelFlag(userId, channelId, 'is_required');
+
+    if (!result || result.missing) {
+      await sendMessage(target, 'Сначала выберите канал.');
+      return;
     }
 
-    await sendMessage(target, text);
+    await sendChannelSelectionMenu(target, userId, result.data, 'create');
+    return;
+  }
+
+  if (data.startsWith('raffle_ch_pub:')) {
+    const channelId = unsafeCallbackPart(data.split(':')[1] || '');
+    const result = await toggleSessionChannelFlag(userId, channelId, 'publish_post');
+
+    if (!result || result.missing) {
+      await sendMessage(target, 'Сначала выберите канал.');
+      return;
+    }
+
+    await sendChannelSelectionMenu(target, userId, result.data, 'create');
+    return;
+  }
+
+  if (data === 'raffle_channels_done') {
+    const session = await getSession(userId);
+
+    if (!session || session.state !== 'await_channel_selection') {
+      await sendMessage(target, 'Сначала начните создание розыгрыша.');
+      return;
+    }
+
+    const sessionData = typeof session.data === 'string'
+      ? JSON.parse(session.data || '{}')
+      : session.data || {};
+
+    const { raffle, inviteToken } = await createRaffleFromSession(userId, sessionData);
+    await clearSession(userId);
+
+    const inviteLink = buildRaffleInviteLink(inviteToken);
+    const selected = sessionData.channels || [];
+    const channelsText = selected.length
+      ? selected.map(ch => `• ${formatChannelWithLink(ch)} — ${ch.is_required ? 'обязательная подписка' : 'подписка не обязательна'}, ${ch.publish_post ? 'с размещением' : 'без размещения'}`).join('\n')
+      : 'Каналы не выбраны.';
+
+    await sendMessage(
+      target,
+      [
+        '✅ **Розыгрыш создан!**',
+        '',
+        `Название: **${sessionData.title}**`,
+        `Окончание: **${dayjs(sessionData.end_at).format('DD.MM.YYYY HH:mm')}**`,
+        '',
+        '**Каналы:**',
+        channelsText,
+        '',
+        '🤝 **Ссылка для совместного розыгрыша:**',
+        inviteLink,
+        '',
+        'Отправьте её другому администратору. Он откроет бота, добавит своего бота-администратора в канал и выберет: публиковать пост в его канале или нет, делать подписку обязательной или нет.'
+      ].join('\n'),
+      [
+        [{ text: '🤝 Пригласить соадмина', url: inviteLink }],
+        [{ text: '📊 Статистика', callback_data: `raffle_stats:${raffle.id}` }],
+        [{ text: '🔎 Мои розыгрыши', callback_data: 'my_raffles' }]
+      ]
+    );
+
+    return;
+  }
+
+  if (data.startsWith('collab_ch_toggle:')) {
+    const channelId = unsafeCallbackPart(data.split(':')[1] || '');
+    const result = await toggleSessionChannel(userId, channelId);
+
+    if (!result || result.missing) {
+      await sendMessage(target, 'Канал не найден в разделе «Мои каналы».');
+      return;
+    }
+
+    await sendChannelSelectionMenu(target, userId, result.data, 'collab');
+    return;
+  }
+
+  if (data.startsWith('collab_ch_req:')) {
+    const channelId = unsafeCallbackPart(data.split(':')[1] || '');
+    const result = await toggleSessionChannelFlag(userId, channelId, 'is_required');
+
+    if (!result || result.missing) {
+      await sendMessage(target, 'Сначала выберите канал.');
+      return;
+    }
+
+    await sendChannelSelectionMenu(target, userId, result.data, 'collab');
+    return;
+  }
+
+  if (data.startsWith('collab_ch_pub:')) {
+    const channelId = unsafeCallbackPart(data.split(':')[1] || '');
+    const result = await toggleSessionChannelFlag(userId, channelId, 'publish_post');
+
+    if (!result || result.missing) {
+      await sendMessage(target, 'Сначала выберите канал.');
+      return;
+    }
+
+    await sendChannelSelectionMenu(target, userId, result.data, 'collab');
+    return;
+  }
+
+  if (data === 'collab_channels_done') {
+    const session = await getSession(userId);
+
+    if (!session || session.state !== 'collab_channel_selection') {
+      await sendMessage(target, 'Ссылка совместного розыгрыша не активна. Откройте приглашение ещё раз.');
+      return;
+    }
+
+    const sessionData = typeof session.data === 'string'
+      ? JSON.parse(session.data || '{}')
+      : session.data || {};
+
+    await addCollabChannelsFromSession(target, userId, sessionData);
     return;
   }
 
@@ -1733,6 +2474,40 @@ async function handleCallbackQuery(cb) {
     }
 
     await joinRaffle(target, userId, raffleId, null);
+    return;
+  }
+
+  if (data.startsWith('raffle_stats:')) {
+    const raffleId = Number(data.split(':')[1]);
+
+    if (!Number.isInteger(raffleId)) {
+      await sendMessage(target, 'Некорректный ID розыгрыша.');
+      return;
+    }
+
+    await sendRaffleStats(target, raffleId);
+    return;
+  }
+
+  if (data.startsWith('pick_raffle:')) {
+    const raffleId = Number(data.split(':')[1]);
+    const raffle = await getRaffleById(raffleId);
+
+    if (!raffle) {
+      await sendMessage(target, 'Розыгрыш не найден.');
+      return;
+    }
+
+    const canPick =
+      Number(raffle.creator_user_id) === Number(userId) ||
+      isAdmin(userId);
+
+    if (!canPick) {
+      await sendMessage(target, 'Только создатель или админ может выбрать победителей.');
+      return;
+    }
+
+    await finishRaffle(raffleId);
     return;
   }
 
@@ -1765,6 +2540,36 @@ async function handleCallbackQuery(cb) {
   await sendMessage(target, 'Неизвестная кнопка.');
 }
 
+async function handleStartPayload(target, from, payload) {
+  const text = String(payload || '').trim();
+
+  if (!text) return false;
+
+  const normalized = text.replace(/^start[=:]/i, '').trim();
+
+  if (normalized.startsWith('collab_')) {
+    const token = normalized.replace(/^collab_/, '').trim();
+
+    if (token) {
+      await startCollabFlow(target, from.id, token);
+      return true;
+    }
+  }
+
+  if (normalized.startsWith('join_')) {
+    const parts = normalized.replace(/^join_/, '').split('_');
+    const raffleId = Number(parts[0]);
+    const ref = parts[1] ? Number(parts[1]) : null;
+
+    if (Number.isInteger(raffleId)) {
+      await joinRaffle(target, from.id, raffleId, ref);
+      return true;
+    }
+  }
+
+  return false;
+}
+
 // =========================
 // MAX update handler
 // =========================
@@ -1792,8 +2597,14 @@ async function handleMaxUpdate(update) {
 
     if (updateType === 'bot_started') {
       const from = getUserFromMaxUpdate(update, target);
+      const payload = getIncomingText(update);
 
       await ensureUser(from);
+
+      if (await handleStartPayload(target, from, payload)) {
+        return;
+      }
+
       await sendWelcome(target, from.id);
       await sendMainMenu(target, from.id);
 
@@ -1848,6 +2659,57 @@ async function handleMaxUpdate(update) {
       return;
     }
 
+    const lowerText = text.trim().toLowerCase();
+
+    if (isChatTarget(chatTarget) && ['подключить канал', 'добавить канал', 'connect channel'].includes(lowerText)) {
+      const meta = await resolveChannelMeta(chatTarget.id, update);
+      const channel = await upsertUserChannel(
+        from.id,
+        chatTarget.id,
+        meta.title,
+        meta.link,
+        from.id,
+        true
+      );
+
+      await sendMessage(
+        chatTarget,
+        [
+          `✅ Канал **${formatChannelName(channel)}** подключён к боту.`,
+          '',
+          'Теперь его можно выбрать при создании розыгрыша: с обязательной подпиской, с размещением поста или без размещения.'
+        ].join('\n')
+      ).catch(error => {
+        console.warn('Не удалось отправить подтверждение в канал:', error.message);
+      });
+
+      await sendMessage(
+        from.id,
+        [
+          '✅ Канал добавлен в раздел **Мои каналы**:',
+          formatChannelWithLink(channel)
+        ].join('\n'),
+        [
+          [{ text: '📢 Мои каналы', callback_data: 'my_channels' }],
+          [{ text: '🎉 Создать розыгрыш', callback_data: 'create_raffle' }]
+        ]
+      ).catch(error => {
+        console.warn('Не удалось отправить подтверждение пользователю:', error.message);
+      });
+
+      return;
+    }
+
+    if (!isChatTarget(chatTarget) && ['добавить канал', 'каналы', 'мои каналы'].includes(lowerText)) {
+      if (lowerText === 'мои каналы' || lowerText === 'каналы') {
+        await sendMyChannels(chatTarget, from.id);
+      } else {
+        await sendAddChannelInstruction(chatTarget);
+      }
+
+      return;
+    }
+
     const handledBySession = await handleSessionMessage(message);
 
     if (handledBySession) return;
@@ -1885,22 +2747,7 @@ async function handleMaxUpdate(update) {
     }
 
     if (text === '/my' || text.toLowerCase() === 'мои розыгрыши') {
-      const raffles = await getUserRaffles(from.id);
-
-      if (!raffles.length) {
-        await sendMessage(chatTarget, 'У вас пока нет розыгрышей.');
-      } else {
-        let msg = '🔎 **Ваши розыгрыши:**\n\n';
-
-        for (const r of raffles) {
-          msg += `#${r.id} | ${r.title} | ${r.status}\n`;
-          msg += `Статистика: /stat_${r.id}\n`;
-          msg += `Завершить: /pick_${r.id}\n\n`;
-        }
-
-        await sendMessage(chatTarget, msg);
-      }
-
+      await sendUserRaffles(chatTarget, from.id);
       return;
     }
 
@@ -1915,7 +2762,7 @@ async function handleMaxUpdate(update) {
       const ref = parts[1] ? Number(parts[1]) : null;
 
       if (!Number.isInteger(raffleId)) {
-        await sendMessage(chatTarget, 'Некорректная команда участия. Пример: /join_15');
+        await sendMessage(chatTarget, 'Некорректная ссылка участия. Откройте розыгрыш через кнопку участия.');
         return;
       }
 
@@ -2087,21 +2934,14 @@ app.get('/subscriptions', async (req, res) => {
   }
 });
 
-app.get('/join/:raffleId', async (req, res) => {
-  const raffleId = Number(req.params.raffleId);
-  const ref = req.query.ref || '';
-
-  const command = ref
-    ? `/join_${raffleId}_${ref}`
-    : `/join_${raffleId}`;
-
-  res.type('html').send(`
+function renderLandingPage({ title, heading, description, buttonText, buttonUrl }) {
+  return `
     <!doctype html>
     <html lang="ru">
       <head>
         <meta charset="UTF-8">
         <meta name="viewport" content="width=device-width, initial-scale=1">
-        <title>Участие в розыгрыше</title>
+        <title>${title}</title>
         <style>
           body {
             font-family: Arial, sans-serif;
@@ -2111,7 +2951,7 @@ app.get('/join/:raffleId', async (req, res) => {
           }
 
           .card {
-            max-width: 520px;
+            max-width: 560px;
             margin: 0 auto;
             background: #fff;
             padding: 24px;
@@ -2119,25 +2959,64 @@ app.get('/join/:raffleId', async (req, res) => {
             box-shadow: 0 12px 30px rgba(0,0,0,.08);
           }
 
-          code {
-            background: #f2f2f2;
-            padding: 10px 14px;
+          .button {
             display: inline-block;
-            border-radius: 8px;
-            font-size: 18px;
+            margin-top: 16px;
+            padding: 14px 18px;
+            border-radius: 12px;
+            background: #111;
+            color: #fff;
+            text-decoration: none;
+            font-weight: 700;
+          }
+
+          .hint {
+            margin-top: 14px;
+            color: #666;
+            font-size: 14px;
           }
         </style>
       </head>
       <body>
         <div class="card">
-          <h2>🎉 Розыгрыш #${raffleId}</h2>
-          <p>Откройте бота в MAX и отправьте команду:</p>
-          <code>${command}</code>
-          <p>После этого бот проверит условия и выдаст билет.</p>
+          <h2>${heading}</h2>
+          <p>${description}</p>
+          <a class="button" href="${buttonUrl}">${buttonText}</a>
+          <p class="hint">Если кнопка не открылась, вернитесь в MAX и откройте бота вручную.</p>
         </div>
       </body>
     </html>
-  `);
+  `;
+}
+
+app.get('/join/:raffleId', async (req, res) => {
+  const raffleId = Number(req.params.raffleId);
+  const ref = req.query.ref || '';
+  const payload = ref
+    ? `join_${raffleId}_${ref}`
+    : `join_${raffleId}`;
+  const buttonUrl = buildBotDeepLink(payload);
+
+  res.type('html').send(renderLandingPage({
+    title: 'Участие в розыгрыше',
+    heading: `🎉 Розыгрыш #${raffleId}`,
+    description: 'Откройте бота в MAX. Бот проверит условия участия и выдаст билет.',
+    buttonText: 'Открыть бота и участвовать',
+    buttonUrl
+  }));
+});
+
+app.get('/collab/:token', async (req, res) => {
+  const token = safeText(req.params.token || '', 200);
+  const buttonUrl = buildBotDeepLink(`collab_${token}`);
+
+  res.type('html').send(renderLandingPage({
+    title: 'Совместный розыгрыш',
+    heading: '🤝 Совместный розыгрыш',
+    description: 'Откройте бота, добавьте его администратором в свой канал и выберите условия: размещать пост в канале или нет, делать подписку обязательной или нет.',
+    buttonText: 'Открыть бота',
+    buttonUrl
+  }));
 });
 
 app.post(['/', '/webhook'], (req, res) => {
@@ -2232,11 +3111,19 @@ async function createTablesIfNotExist() {
       raffle_id INT NOT NULL REFERENCES raffles(id) ON DELETE CASCADE,
       channel_id BIGINT NOT NULL,
       channel_title TEXT,
+      channel_link TEXT,
+      owner_user_id BIGINT,
       is_required BOOLEAN DEFAULT true,
       publish_post BOOLEAN DEFAULT true,
       created_at TIMESTAMP DEFAULT NOW(),
       updated_at TIMESTAMP DEFAULT NOW()
     );
+
+    ALTER TABLE raffle_channels
+      ADD COLUMN IF NOT EXISTS channel_link TEXT;
+
+    ALTER TABLE raffle_channels
+      ADD COLUMN IF NOT EXISTS owner_user_id BIGINT;
 
     CREATE TABLE IF NOT EXISTS raffle_queue (
       id SERIAL PRIMARY KEY,
@@ -2285,6 +3172,28 @@ async function createTablesIfNotExist() {
       created_at TIMESTAMP DEFAULT NOW()
     );
 
+    CREATE TABLE IF NOT EXISTS user_channels (
+      id SERIAL PRIMARY KEY,
+      owner_user_id BIGINT NOT NULL REFERENCES users(max_user_id) ON DELETE CASCADE,
+      channel_id BIGINT NOT NULL,
+      channel_title TEXT,
+      channel_link TEXT,
+      added_by_user_id BIGINT REFERENCES users(max_user_id) ON DELETE SET NULL,
+      can_publish BOOLEAN DEFAULT true,
+      is_active BOOLEAN DEFAULT true,
+      created_at TIMESTAMP DEFAULT NOW(),
+      updated_at TIMESTAMP DEFAULT NOW(),
+      UNIQUE (owner_user_id, channel_id)
+    );
+
+    CREATE TABLE IF NOT EXISTS raffle_invites (
+      id SERIAL PRIMARY KEY,
+      raffle_id INT NOT NULL REFERENCES raffles(id) ON DELETE CASCADE,
+      token TEXT UNIQUE NOT NULL,
+      invited_by_user_id BIGINT REFERENCES users(max_user_id) ON DELETE SET NULL,
+      created_at TIMESTAMP DEFAULT NOW()
+    );
+
     CREATE INDEX IF NOT EXISTS ix_raffles_status_end_at
     ON raffles (status, end_at);
 
@@ -2299,6 +3208,15 @@ async function createTablesIfNotExist() {
 
     CREATE INDEX IF NOT EXISTS ix_raffle_winners_raffle
     ON raffle_winners (raffle_id);
+
+    CREATE INDEX IF NOT EXISTS ix_user_channels_owner
+    ON user_channels (owner_user_id, is_active);
+
+    CREATE INDEX IF NOT EXISTS ix_raffle_invites_token
+    ON raffle_invites (token);
+
+    CREATE INDEX IF NOT EXISTS ix_raffle_channels_owner
+    ON raffle_channels (owner_user_id);
   `);
 
   console.log('✅ Все таблицы созданы или уже существуют');
