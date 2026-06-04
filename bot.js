@@ -3976,7 +3976,6 @@ async function sendPublishDatePrompt(target, data = {}) {
       '🕒 **Время публикации поста**',
       '',
       'Укажите, когда бот должен опубликовать пост с розыгрышем в выбранных каналах. Время указывается по МСК.',
-      'Минимальной задержки больше нет: можно указать любое будущее время.',
       `Сейчас по боту: **${formatDateTime(minPublishAt)}**.`,
       '',
       'Можно нажать быструю кнопку или ввести дату вручную по МСК:',
@@ -5267,7 +5266,7 @@ async function handleSessionMessage(message) {
     data.title = safeText(text, 255);
 
     if (!data.title) {
-      await sendMessage(target, 'Название не может быть пустым. Введите название розыгрыша:');
+      await sendMessage(target, 'Название не может быть пустым. Введите название розыгрыша: *Розыгрыш Iphone 17 PRO*');
       return true;
     }
 
@@ -5280,7 +5279,7 @@ async function handleSessionMessage(message) {
     data.description = safeText(text, 2000);
 
     await setSession(userId, 'await_prizes', data);
-    await sendMessage(target, 'Введите список призов, каждый с новой строки:');
+    await sendMessage(target, 'Введите список призов, каждый с новой строки: без запятой');
     return true;
   }
 
