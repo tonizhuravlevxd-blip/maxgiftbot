@@ -2627,11 +2627,11 @@ async function sendChannelSelectionMenu(target, userId, data, mode = 'create') {
     if (stored) {
       keyboard.push([
         {
-          text: stored.is_required ? '✅ Обязательная подписка' : '☑️ Подписка не обязательна',
+          text: stored.is_required ? '☑️ Подписка не обязательна' : '✅ Обязательная подписка',
           callback_data: `${mode === 'collab' ? 'collab_ch_req' : 'raffle_ch_req'}:${id}`
         },
         {
-          text: stored.publish_post ? '📣 С размещением' : '🙈 Без размещения',
+          text: stored.publish_post ? '🙈 Без размещения' : '📣 С размещением',
           callback_data: `${mode === 'collab' ? 'collab_ch_pub' : 'raffle_ch_pub'}:${id}`
         }
       ]);
