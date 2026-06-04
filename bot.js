@@ -1040,16 +1040,14 @@ async function startPromotionPaymentEmailFlow(target, userId, raffleId, product)
   });
 
   return sendMessage(
-    target,
-    [
-      `🧾 **${info.title}**`,
-      `Стоимость: **${Number(info.priceRub).toFixed(0)} ₽**`,
-      '',
-      'Введите email для чека одним сообщением.',
-      '',
-      `Если отправите сообщение без корректного email, для чека будет использован резервный email: **${YOOKASSA_RECEIPT_EMAIL}**.`
-    ].join('\n')
-  );
+  target,
+  [
+    `🧾 **${info.title}**`,
+    `Стоимость: **${Number(info.priceRub).toFixed(0)} ₽**`,
+    '',
+    'Введите email для чека одним сообщением.'
+  ].join('\n')
+);
 }
 
 async function handlePromotionEmailMessage(message, data = {}) {
