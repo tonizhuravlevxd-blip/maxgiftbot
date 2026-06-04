@@ -2503,23 +2503,24 @@ async function getUserChannel(userId, channelId) {
 async function sendAddChannelInstruction(target) {
   return sendMessage(
     target,
-  [
-    '➕ **Добавить канал**',
-    '',
-    'Чтобы бот мог публиковать розыгрыш в вашем канале:',
-    '',
-    `1. Добавьте бота ${BOT_USERNAME} в канал или найдите его по имени **${BOT_SEARCH_NAME}**.`,
-    '2. Выдайте боту права администратора на размещение постов.',
-    '3. Вернитесь сюда и нажмите **🔄 Обновить**.',
-    '',
-    'Писать сообщение в канале больше не нужно. Бот сам проверит подключение и добавит канал в раздел **Мои каналы**.'
-  ].join('\n'),
-  [
-    [{ text: '🔄 Обновить', callback_data: 'refresh_channels' }],
-    [{ text: '📢 Мои каналы', callback_data: 'my_channels' }],
-    [{ text: '🏠 Главное меню', callback_data: 'main_menu' }]
-  ]
-);
+    [
+      '➕ **Добавить канал**',
+      '',
+      'Чтобы бот мог публиковать розыгрыш в вашем канале:',
+      '',
+      `1. Добавьте бота ${BOT_USERNAME} в канал или найдите его по имени **${BOT_SEARCH_NAME}**.`,
+      '2. Выдайте боту права администратора на размещение постов.',
+      '3. Вернитесь сюда и нажмите **🔄 Обновить**.',
+      '',
+      'Писать сообщение в канале больше не нужно. Бот сам проверит подключение и добавит канал в раздел **Мои каналы**.'
+    ].join('\n'),
+    [
+      [{ text: '🔄 Обновить', callback_data: 'refresh_channels' }],
+      [{ text: '📢 Мои каналы', callback_data: 'my_channels' }],
+      [{ text: '🏠 Главное меню', callback_data: 'main_menu' }]
+    ]
+  );
+}
 
 async function sendMyChannels(target, userId) {
   const channels = await getUserChannels(userId);
