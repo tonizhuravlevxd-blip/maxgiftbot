@@ -5929,9 +5929,7 @@ async function completeJoinRaffleAfterCheck(target, userId, raffleId, invitedBy 
       '',
       `За каждого приглашённого участника можно получить **+1 бонусный билет**.`,
       `Лимит бонусных билетов: **${MAX_REFERRAL_BONUS_TICKETS}**.`,
-      bonusLine,
-      '',
-      buildProfileLinkInstruction()
+      bonusLine
     ].filter(Boolean).join('\n'),
     buildBotBrandKeyboard()
   );
