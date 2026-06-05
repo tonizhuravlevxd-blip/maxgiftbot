@@ -130,7 +130,7 @@ const LEGAL_VERSION = String(process.env.LEGAL_VERSION || '2026-06-05').trim();
 const PERMISSIONS_HELP_IMAGE_URL = String(
   process.env.PERMISSIONS_HELP_IMAGE_URL ||
   process.env.BOT_PERMISSIONS_HELP_IMAGE_URL ||
-  'https://v3b.fal.media/files/b/0a9d026e/QEmmNq9GOE5GeHkWFsiXU_qNKm4RQp1xuHoqwH46yOlXmubgnubbBBeaknohnIuLqMn9YTPFlQNkKbGEO8JYP4K_Ge2XAlwApRdA1JTjDaqDPO.jpg'
+  'https://max.ru/c/-74285880911137/AZ6Zr82SUHo'
 ).trim();
 
 const PERMISSIONS_HELP_TEXT = String(
