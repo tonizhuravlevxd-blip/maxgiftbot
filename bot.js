@@ -281,9 +281,9 @@ function safeText(value, max = 4000) {
 
 function buildRaffleTitlePrompt() {
   return [
-    'Введите название розыгрыша.',
-    '',
-    'Пример: *Iphone 17 PRO*'
+    'Введите название розыгрыша👇',
+    'Пример:',
+    'РОЗЫГРЫШ *Iphone 17 PRO*'
   ].join('\n');
 }
 
