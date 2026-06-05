@@ -5904,8 +5904,6 @@ async function completeJoinRaffleAfterCheck(target, userId, raffleId, invitedBy 
         refLink,
         '',
         `За каждого приглашённого участника можно получить +1 билет, максимум **${MAX_REFERRAL_BONUS_TICKETS}** бонусных билетов.`,
-        '',
-        buildProfileLinkInstruction()
       ].join('\n'),
       buildBotBrandKeyboard()
     );
