@@ -7086,7 +7086,7 @@ async function sendRaffleStats(target, raffleId, requesterUserId = null) {
       text += `\n⚪ Участники без источника: **${unknown}** — это старые ссылки/ручной вход без channel_id.\n`;
     }
 
-    text += '\n🟢 считается по проверкам подписки. 🔴 считается по проверкам подписки и по webhook `user_removed`, если пользователь был участником/проверенным пользователем этого активного розыгрыша. “Участников из поста” считается точно по deep-link с channel_id для новых постов.\n';
+    
   }
 
   if (winners.length) {
