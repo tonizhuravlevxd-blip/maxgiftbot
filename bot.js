@@ -2022,7 +2022,7 @@ function buildBotBrandLine() {
 }
 
 function buildMorePrizesLine() {
-  return `Еще больше призов ${markdownLink(MORE_PRIZES_LABEL, MORE_PRIZES_URL || BOT_PUBLIC_URL)}`;
+  return `Еще больше призов 🥳 ${markdownLink(MORE_PRIZES_LABEL, MORE_PRIZES_URL || BOT_PUBLIC_URL)}`;
 }
 
 function getRafflePublicNumber(raffle) {
