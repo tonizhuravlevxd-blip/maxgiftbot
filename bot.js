@@ -7572,18 +7572,15 @@ async function sendUserRaffles(target, userId) {
 
   let text = `🔎 **Ваши последние ${USER_RAFFLES_VISIBLE_LIMIT} розыгрышей:**
 
-Старые завершённые/черновые розыгрыши скрываются из списка, чтобы не создавать мусор. Активные и запланированные розыгрыши не удаляются, статистика и данные сохраняются.
+Старые завершённые/черновые розыгрыши скрываются из списка. Активные и запланированные розыгрыши,статистика и данные сохраняются.
 
 `;
+
   const keyboard = [];
 
   for (const r of raffles) {
     const post = await getBestRafflePostForLink(r.id);
     const title = displayValue(r.title, 'Без названия');
-
-    // Если ссылка на пост есть, кликабельным делаем именно название розыгрыша.
-    // Отдельную кнопку «Открыть пост» не добавляем: она раздувала inline-клавиатуру
-    // и MAX мог возвращать errors.maxRowSize.
     const titleForLine = post.url ? markdownLink(title, post.url) : title;
 
     const postLine = post.url
@@ -7597,28 +7594,22 @@ async function sendUserRaffles(target, userId) {
 
 `;
 
-    // Кнопки для каждого розыгрыша раскладываем в отдельные 3 ряда.
-    // Так в MAX не будет ошибки errors.maxRowSize и визуально легче нажимать.
-    const row1 = [
+    const row = [
       { text: `🔄 #${r.id}`, callback_data: `refresh_raffle:${r.id}` },
       { text: `📊 #${r.id}`, callback_data: `raffle_stats:${r.id}` }
     ];
-    const row2 = [];
-    const row3 = [];
 
     if (r.status === 'scheduled') {
-      row2.push({ text: `🚀 Сейчас #${r.id}`, callback_data: `start_raffle_now:${r.id}` });
-      row2.push({ text: `✏️ #${r.id}`, callback_data: `edit_raffle:${r.id}` });
-      row3.push({ text: `⏹ Стоп #${r.id}`, callback_data: `stop_raffle:${r.id}` });
+      row.push({ text: `🚀 Сейчас #${r.id}`, callback_data: `start_raffle_now:${r.id}` });
+      row.push({ text: `✏️ #${r.id}`, callback_data: `edit_raffle:${r.id}` });
+      row.push({ text: `⏹ Стоп #${r.id}`, callback_data: `stop_raffle:${r.id}` });
     } else if (r.status === 'active') {
-      row2.push({ text: `⏹ Стоп #${r.id}`, callback_data: `stop_raffle:${r.id}` });
+      row.push({ text: `⏹ Стоп #${r.id}`, callback_data: `stop_raffle:${r.id}` });
     } else if (r.status === 'finished') {
-      row2.push({ text: `🔁 Переиграть #${r.id}`, callback_data: `reroll_winners:${r.id}` });
+      row.push({ text: `🔁 Переиграть #${r.id}`, callback_data: `reroll_winners:${r.id}` });
     }
 
-    keyboard.push(row1);
-    if (row2.length) keyboard.push(row2);
-    if (row3.length) keyboard.push(row3);
+    keyboard.push(row);
   }
 
   keyboard.push([{ text: '🎉 Создать розыгрыш', callback_data: 'create_raffle' }]);
