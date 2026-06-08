@@ -3625,7 +3625,7 @@ async function sendChannelSelectionMenu(target, userId, data, mode = 'create', o
     text += 'У вас пока нет подключённых каналов.\n';
     text += 'Сначала добавьте бота в канал, дайте права администратора на публикацию и нажмите **🔄 Обновить**.';
   } else if (!selected.length) {
-    text += 'Каналы пока не выбраны. Можно продолжить без каналов или выбрать канал ниже.';
+    text += 'Каналы пока **не** выбраны. Можно продолжить без каналов или выбрать канал ниже,нажав ☑️';
   } else {
     text += '**Выбрано:**\n';
 
@@ -3645,7 +3645,7 @@ async function sendChannelSelectionMenu(target, userId, data, mode = 'create', o
 
     keyboard.push([
       {
-        text: `${stored ? '✅' : '➕'} ${title}`,
+        text: `${stored ? '✅' : '☑️'} ${title}`,
         callback_data: `${mode === 'collab' ? 'collab_ch_toggle' : 'raffle_ch_toggle'}:${id}`
       }
     ]);
@@ -6414,7 +6414,7 @@ function buildRaffleDraftPreviewText(data = {}) {
   return [
     '🧩 **Шаблон поста розыгрыша**',
     '',
-    'Так пост будет выглядеть после публикации🤳. **Проверьте текст и настройки перед созданием внимательно**',
+    '**Проверьте текст и настройки перед созданием внимательно**🤳',
     '',
     `🎉 **${data.title || 'Без названия'}**`,
     '',
@@ -6457,7 +6457,7 @@ async function sendRaffleDraftPreview(target, userId, data = {}) {
   keyboard.push(
     [
       { text: '✏️ Название', callback_data: 'draft_edit_title' },
-      { text: '✏️ Описание', callback_data: 'draft_edit_description' }
+      { text: '📝 Описание', callback_data: 'draft_edit_description' }
     ],
     [
       { text: '🎁 Призы', callback_data: 'draft_edit_prizes' },
