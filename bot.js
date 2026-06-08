@@ -6802,7 +6802,7 @@ function buildRaffleText(raffle, participantsCount = 0, channels = []) {
     channelsText ? '' : null,
     channelsText || null,
     '',
-    'Чтобы участвовать, подпишитесь на каналы из списка выше и нажмите кнопку ниже.',
+    '*Чтобы участвовать,нажмите кнопку 🎁Участвовать*',
     '',
     buildRaffleFooter(raffle)
   ].filter(line => line !== null).join('\n');
