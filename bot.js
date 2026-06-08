@@ -6450,7 +6450,7 @@ async function sendRaffleDraftPreview(target, userId, data = {}) {
         [{ text: '↩️ Вернуться к розыгрышу', callback_data: `refresh_raffle:${data.editing_raffle_id}` }]
       ]
     : [
-        [{ text: '✅ Создать без соадмина', callback_data: 'raffle_confirm_create' }],
+        [{ text: '🧍‍♂️ Создать без соадмина', callback_data: 'raffle_confirm_create' }],
         [{ text: '🤝 Создать и дать ссылку соадмину', callback_data: 'raffle_confirm_create_collab' }]
       ];
 
