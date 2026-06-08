@@ -3631,8 +3631,8 @@ async function sendChannelSelectionMenu(target, userId, data, mode = 'create', o
 
     for (const ch of selected) {
       text += `• ${formatChannelWithLink(ch)} — `;
-      text += `${ch.is_required ? 'обязательная подписка' : 'подписка не обязательна'}, `;
-      text += `${ch.publish_post ? 'с размещением' : 'без размещения'}\n`;
+      text += `${ch.is_required ? 'обязательная подписка✔️' : 'подписка не обязательна❌'}, `;
+      text += `${ch.publish_post ? 'с размещением📣' : 'без размещения🙈'}\n`;
     }
   }
 
