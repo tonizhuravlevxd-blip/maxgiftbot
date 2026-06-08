@@ -3618,7 +3618,7 @@ async function sendChannelSelectionMenu(target, userId, data, mode = 'create', o
     : '📢 **Каналы для розыгрыша**\n\n';
 
   text += 'Выберите каналы из списка ниже. Для каждого канала можно отдельно включить:\n';
-  text += '✅ обязательную подписку;\n';
+  text += '✔️ обязательную подписку;\n';
   text += '📣 размещение поста с розыгрышем.\n\n';
 
   if (!userChannels.length) {
@@ -3653,7 +3653,7 @@ async function sendChannelSelectionMenu(target, userId, data, mode = 'create', o
     if (stored) {
       keyboard.push([
         {
-          text: stored.is_required ? '☑️ Подписка не обязательна' : '✅ Обязательная подписка',
+          text: stored.is_required ? '❌ Подписка не обязательна' : '✔️ Обязательная подписка',
           callback_data: `${mode === 'collab' ? 'collab_ch_req' : 'raffle_ch_req'}:${id}`
         },
         {
