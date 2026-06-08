@@ -7039,9 +7039,9 @@ async function sendOneMinutePendingJoinReminders() {
       await sendMessage(
         row.user_id,
         [
-          `🔔 **Завершите участие в розыгрыше «${displayValue(row.title, 'Без названия')}»**`,
+          `🎫 **Завершите участие в розыгрыше «${displayValue(row.title, 'Без названия')}»**`,
           '',
-          'Вы недавно нажали **«Участвовать»**, но билет ещё не создан.',
+          'Вы недавно нажали **«🎁Участвовать»**, но билет ещё не создан.',
           '',
           missing.length
             ? `Подпишитесь на оставшиеся каналы и нажмите **✅ Проверить подписку** 👇\n\n${formatMissingChannelsText(missing)}`
