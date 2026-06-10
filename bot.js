@@ -733,12 +733,12 @@ async function getMaxSubscriptions() {
 const SOS_SUPPORT_URL = 'https://max.ru/u/f9LHodD0cOK-A0lZdI24jE547UNSp4Gdn57gyHn8TJVc5hh-0NCZiBCjktg';
 
 const BOT_PUBLIC_COMMANDS = [
-  { name: 'start', description: 'Запустить бота' },
-  { name: 'menu', description: 'Главное меню' },
-  { name: 'create', description: 'Создать розыгрыш' },
-  { name: 'cancel', description: 'Отмена' },
-  { name: 'my', description: 'Мои розыгрыши' },
-  { name: 'sos', description: '❓ Вопросы и помощь' }
+  { name: 'start', description: 'Запустить бота 📳' },
+  { name: 'menu', description: 'Главное меню 🎛️' },
+  { name: 'create', description: 'Создать розыгрыш 🥳' },
+  { name: 'cancel', description: 'Отмена 🚫' },
+  { name: 'my', description: 'Мои розыгрыши 📁' },
+  { name: 'sos', description: 'Вопросы и помощь ❓' }
 ];
 
 async function registerBotCommandsWithMaxLibrary() {
