@@ -823,7 +823,7 @@ function buildPlayGameHtml() {
     * { box-sizing: border-box; -webkit-tap-highlight-color: transparent; }
     html, body { margin: 0; min-height: 100%; background: #111827; font-family: Arial, Helvetica, sans-serif; color: #fff; }
     body { display: flex; align-items: center; justify-content: center; padding: 16px; }
-    .wrap { width: min(760px, 100%); }
+    .wrap { width: min(540px, 100%); }
     .card { background: linear-gradient(180deg, #1f2937, #111827); border: 1px solid rgba(255,255,255,.12); border-radius: 24px; padding: 16px; box-shadow: 0 24px 70px rgba(0,0,0,.35); }
     .top { display: flex; align-items: center; justify-content: space-between; gap: 12px; margin-bottom: 12px; }
     .brand { font-weight: 900; letter-spacing: .08em; font-size: clamp(18px, 4vw, 28px); }
@@ -841,7 +841,7 @@ function buildPlayGameHtml() {
         <div class="brand">РОЗЫГРЫШ БОТ</div>
         <div class="score">Очки: <span id="score">0</span></div>
       </div>
-      <canvas id="game" width="1200" height="800" aria-label="Игра: Скупи) перепрыгивает препятствия"></canvas>
+      <canvas id="game" width="1400" height="800" aria-label="Игра: Скупи) перепрыгивает препятствия"></canvas>
       <button class="button" id="jumpBtn">Прыгнуть / Начать заново</button>
       <p class="hint">Нажмите кнопку, экран или пробел. Скупи) бежит бесконечно, скорость растёт. Не врежьтесь в препятствие.</p>
     </section>
