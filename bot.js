@@ -160,7 +160,7 @@ const BOT_PUBLIC_URL = String(
 
 const BOT_BRAND_NAME = process.env.BOT_BRAND_NAME || 'РОЗЫГРЫШ БОТ';
 const BOT_USERNAME = process.env.BOT_USERNAME || '@id231711659887_bot';
-const BOT_SEARCH_NAME = process.env.BOT_SEARCH_NAME || 'Бот розыгрыш';
+const BOT_SEARCH_NAME = process.env.BOT_SEARCH_NAME || 'РОЗЫГРЫШ БОТ';
 const BOT_TIMEZONE_LABEL = process.env.BOT_TIMEZONE_LABEL || 'МСК';
 const BOT_UTC_OFFSET_MINUTES = Number(process.env.BOT_UTC_OFFSET_MINUTES || 180);
 const MAX_CHANNEL_LINK_TEMPLATE = String(process.env.MAX_CHANNEL_LINK_TEMPLATE || '').trim();
@@ -4582,7 +4582,7 @@ function buildWelcomeText(userOrId) {
     `Сначала добавьте бота ${BOT_USERNAME} в канал или найдите его по имени **${BOT_SEARCH_NAME}**.`,
     `Затем выдайте боту ${permissionsLink} администратора на размещение постов и нажмите **Добавить канал** / **Обновить** в меню.`,
     '',
-    'Через меню можно создать розыгрыш, подключить каналы, добавить фото к посту, включить обязательную подписку, пригласить соадмина и смотреть статистику.',
+    '**Через меню можно создать розыгрыш, подключить каналы, добавить фото к посту, создавать АВТОПОСТ и тесты для ваших каналов, пригласить соадмина и смотреть статистику.**',
     adminLine
   ].join('\n');
 }
