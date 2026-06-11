@@ -941,7 +941,7 @@ function setupApostModule(options) {
   }
 
   async function sendTestsList(target) {
-    const keyboard = TESTS.map(test => [{ text: `🧠 ${test.title}`.slice(0, 42), callback_data: `apost_test:${encodeURIComponent(test.id)}` }]);
+    const keyboard = TESTS.map(test => [{ text: `👁️‍🗨️ ${test.title}`.slice(0, 42), callback_data: `apost_test:${encodeURIComponent(test.id)}` }]);
     keyboard.push([{ text: '⬅️ Назад', callback_data: 'apost_menu' }]);
 
     return sendMessage(target, [
