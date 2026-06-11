@@ -771,6 +771,7 @@ const BOT_PUBLIC_COMMANDS = [
   { name: 'create', description: 'Создать розыгрыш 🥳' },
   { name: 'cancel', description: 'Отмена 🚫' },
   { name: 'my', description: 'Мои розыгрыши 📁' },
+  { name: 'apost', description: 'Автопост|Тесты 🔊' },
   { name: 'sos', description: 'Вопросы и помощь ❓' }
 ];
 
