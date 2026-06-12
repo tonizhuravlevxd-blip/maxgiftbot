@@ -3899,9 +3899,6 @@ async function sendChannelSelectionMenu(target, userId, data, mode = 'create', o
     keyboard.push([{ text: '🔄 Обновить каналы', callback_data: 'refresh_channels' }]);
   }
 
-  if (mode === 'create' && data.__create_channel_back === true) {
-    keyboard.push([{ text: '⬅️ Назад к времени окончания', callback_data: 'raffle_step_back:end_date' }]);
-  }
 
   keyboard.push([{ text: '➕ Добавить канал', callback_data: 'add_channel' }]);
   keyboard.push([{ text: mode === 'collab' ? '✅ Добавить к розыгрышу' : '➡️ Далее к шаблону', callback_data: mode === 'collab' ? 'collab_channels_done' : 'raffle_channels_done' }]);
