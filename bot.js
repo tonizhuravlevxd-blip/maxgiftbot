@@ -435,11 +435,32 @@ function sleep(ms) {
   return new Promise(resolve => setTimeout(resolve, delay));
 }
 
-function buildRaffleTitlePrompt() {
+function buildCreateStepProgress(step, title = '') {
+  const total = RAFFLE_CREATE_TOTAL_STEPS;
+  const current = Math.min(Math.max(Number(step) || 1, 1), total);
+  const width = 16;
+  const filled = Math.max(1, Math.round((current / total) * width));
+  const empty = Math.max(0, width - filled);
+  const percent = Math.round((current / total) * 100);
+  const bar = `${'█'.repeat(filled)}${'░'.repeat(empty)}`;
+  const cleanTitle = String(title || '').trim();
+
+  const stepEmojis = {
+    1: '✍️',
+    2: '📝',
+    3: '🎁',
+    4: '🕒',
+    5: '⏰',
+    6: '📡',
+    7: '👀',
+    8: '✅'
+  };
+
+  const emoji = stepEmojis[current] || '🧩';
+
   return [
-    'Введите название розыгрыша👇',
-    'Пример:',
-    'РОЗЫГРЫШ *Iphone 17 PRO*'
+    `${emoji} **Шаг ${current}/${total}${cleanTitle ? ` — ${cleanTitle}` : ''}**`,
+    `\`${bar} ${percent}%\``
   ].join('\n');
 }
 
@@ -4013,9 +4034,9 @@ async function sendChannelSelectionMenu(target, userId, data, mode = 'create', o
 
   const selected = getSelectedChannelsFromSession(data);
 
-  let text = mode === 'collab'
-    ? '🤝 **Каналы для совместного розыгрыша**\n\n'
-    : '📡 **Каналы для розыгрыша**\n\n';
+let text = mode === 'collab'
+  ? '🤝 **Каналы для совместного розыгрыша**\n\n'
+  : `${buildCreateStepProgress(6, 'Каналы')}\n\n📡 **Каналы для розыгрыша**\n\n`;
 
   text += 'Выберите каналы из списка ниже. Для каждого канала можно отдельно включить:\n';
   text += '✔️ обязательную подписку;\n';
@@ -7165,19 +7186,33 @@ function buildDateQuickKeyboard(kind, options = {}) {
 
 async function sendPublishDatePrompt(target, data = {}, options = {}) {
   const minPublishAt = getMinPublishAt();
+  const isEditingExisting = Boolean(data?.editing_raffle_id);
+
+  const text = isEditingExisting
+    ? [
+        '🕒 **Время публикации поста**',
+        '',
+        'Укажите, когда бот должен опубликовать пост с розыгрышем в выбранных каналах. Время указывается по МСК.',
+        `Сейчас по боту: **${formatDateTime(minPublishAt)}**.`,
+        '',
+        'Можно нажать быструю кнопку или ввести дату вручную по МСК:',
+        '`2026-06-10 20:00`',
+        '`10.06.2026 20:00`'
+      ].join('\n')
+    : buildCreateStepMessage(4, 'Публикация', [
+        '🕒 **Время публикации поста**',
+        '',
+        'Укажите, когда бот должен опубликовать пост с розыгрышем в выбранных каналах. Время указывается по МСК.',
+        `Сейчас по боту: **${formatDateTime(minPublishAt)}**.`,
+        '',
+        'Можно нажать быструю кнопку или ввести дату вручную по МСК:',
+        '`2026-06-10 20:00`',
+        '`10.06.2026 20:00`'
+      ]);
 
   return sendMessage(
     target,
-    [
-      '🕒 **Время публикации поста**',
-      '',
-      'Укажите, когда бот должен опубликовать пост с розыгрышем в выбранных каналах. Время указывается по МСК.',
-      `Сейчас по боту: **${formatDateTime(minPublishAt)}**.`,
-      '',
-      'Можно нажать быструю кнопку или ввести дату вручную по МСК:',
-      '`2026-06-10 20:00`',
-      '`10.06.2026 20:00`'
-    ].join('\n'),
+    text,
     buildDateQuickKeyboard('publish', options)
   );
 }
@@ -7185,21 +7220,37 @@ async function sendPublishDatePrompt(target, data = {}, options = {}) {
 async function sendEndDatePrompt(target, data = {}, options = {}) {
   const publishAt = data.publish_at || getMinPublishAt().toISOString();
   const minEndAt = getMinEndAtForPublish(publishAt);
+  const isEditingExisting = Boolean(data?.editing_raffle_id);
+
+  const text = isEditingExisting
+    ? [
+        '⏰ **Время окончания розыгрыша**',
+        '',
+        'Время указывается по МСК.',
+        `Публикация поста: **${formatDateTime(publishAt)}**.`,
+        `Окончание должно быть минимум через **${MIN_RAFFLE_DURATION_AFTER_PUBLISH_MINUTES} минут** после публикации.`,
+        `Ближайшее допустимое окончание: **${formatDateTime(minEndAt)}**.`,
+        '',
+        'Можно нажать быструю кнопку или ввести дату вручную по МСК:',
+        '`2026-06-10 20:00`',
+        '`10.06.2026 20:00`'
+      ].join('\n')
+    : buildCreateStepMessage(5, 'Окончание', [
+        '⏰ **Время окончания розыгрыша**',
+        '',
+        'Время указывается по МСК.',
+        `Публикация поста: **${formatDateTime(publishAt)}**.`,
+        `Окончание должно быть минимум через **${MIN_RAFFLE_DURATION_AFTER_PUBLISH_MINUTES} минут** после публикации.`,
+        `Ближайшее допустимое окончание: **${formatDateTime(minEndAt)}**.`,
+        '',
+        'Можно нажать быструю кнопку или ввести дату вручную по МСК:',
+        '`2026-06-10 20:00`',
+        '`10.06.2026 20:00`'
+      ]);
 
   return sendMessage(
     target,
-    [
-      '⏰ **Время окончания розыгрыша**',
-      '',
-      'Время указывается по МСК.',
-      `Публикация поста: **${formatDateTime(publishAt)}**.`,
-      `Окончание должно быть минимум через **${MIN_RAFFLE_DURATION_AFTER_PUBLISH_MINUTES} минут** после публикации.`,
-      `Ближайшее допустимое окончание: **${formatDateTime(minEndAt)}**.`,
-      '',
-      'Можно нажать быструю кнопку или ввести дату вручную по МСК:',
-      '`2026-06-10 20:00`',
-      '`10.06.2026 20:00`'
-    ].join('\n'),
+    text,
     buildDateQuickKeyboard('end', options)
   );
 }
@@ -7323,15 +7374,22 @@ async function sendRaffleDraftPreview(target, userId, data = {}) {
     [{ text: '❌ Отмена', callback_data: 'cancel_session' }]
   );
 
-  return sendMessage(
-    target,
-    buildRaffleDraftPreviewText(data),
-    keyboard
-  );
-}
+const previewText = isEditingExisting
+  ? buildRaffleDraftPreviewText(data)
+  : buildCreateStepMessage(7, 'Проверка шаблона', [
+      buildRaffleDraftPreviewText(data)
+    ]);
+
+return sendMessage(
+  target,
+  previewText,
+  keyboard
+);
 
 function buildCreatedRaffleMessage(sessionData, raffle, invite) {
   return [
+    buildCreateStepProgress(8, 'Готово'),
+    '',
     '✅ **Розыгрыш создан!**',
     '',
     `№: **${getRafflePublicNumber(raffle)}**`,
@@ -8999,34 +9057,34 @@ async function handleSessionMessage(message) {
     }
 
     await setSession(userId, 'await_description', data);
-    await sendMessage(
-      target,
-      'Введите описание розыгрыша:',
-      buildCreateStepBackKeyboard('title', '⬅️ Назад к названию')
-    );
-    return true;
-  }
+await sendMessage(
+  target,
+  buildRaffleDescriptionPrompt(),
+  buildCreateStepBackKeyboard('title', '⬅️ Назад к названию')
+);
 
   if (state === 'await_description') {
     data.description = safeText(text, 2000);
 
     await setSession(userId, 'await_prizes', data);
-    await sendMessage(
-      target,
-      'Введите список призов, каждый с новой строки: без запятой',
-      buildCreateStepBackKeyboard('description', '⬅️ Назад к описанию')
-    );
-    return true;
-  }
+await sendMessage(
+  target,
+  buildRafflePrizesPrompt(),
+  buildCreateStepBackKeyboard('description', '⬅️ Назад к описанию')
+);
 
   if (state === 'await_prizes') {
     const prizes = safeText(text, 3000);
     const prizeList = prizes.split('\n').map(x => x.trim()).filter(Boolean);
 
-    if (!prizeList.length) {
-      await sendMessage(target, 'Добавьте хотя бы один приз.');
-      return true;
-    }
+if (!prizeList.length) {
+  await sendMessage(target, buildCreateStepMessage(3, 'Призы', [
+    'Добавьте хотя бы один приз.',
+    '',
+    'Введите список призов, каждый с новой строки: без запятой'
+  ]));
+  return true;
+}
 
     data.prizes = prizeList.join('\n');
     data.prize_count = prizeList.length;
@@ -10546,23 +10604,19 @@ async function handleCallbackQuery(cb) {
 
     if (step === 'description' && session.state === 'await_prizes') {
       await setSession(userId, 'await_description', sessionData);
-      await sendMessage(
-        target,
-        'Введите описание розыгрыша:',
-        buildCreateStepBackKeyboard('title', '⬅️ Назад к названию')
-      );
-      return;
-    }
+await sendMessage(
+  target,
+  buildRaffleDescriptionPrompt(),
+  buildCreateStepBackKeyboard('title', '⬅️ Назад к названию')
+);
 
     if (step === 'prizes' && session.state === 'await_publish_date') {
       await setSession(userId, 'await_prizes', sessionData);
-      await sendMessage(
-        target,
-        'Введите список призов, каждый с новой строки: без запятой',
-        buildCreateStepBackKeyboard('description', '⬅️ Назад к описанию')
-      );
-      return;
-    }
+await sendMessage(
+  target,
+  buildRafflePrizesPrompt(),
+  buildCreateStepBackKeyboard('description', '⬅️ Назад к описанию')
+);
 
     if (step === 'publish_date' && session.state === 'await_end_date') {
       await setSession(userId, 'await_publish_date', sessionData);
