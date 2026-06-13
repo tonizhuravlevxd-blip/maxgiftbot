@@ -4452,21 +4452,22 @@ async function addCollabChannelsFromSession(target, userId, data) {
 
   await clearSession(userId);
 
-  return sendMessage(
-    target,
-    [
-      '✅ Каналы добавлены к совместному розыгрышу.',
-      '',
-      `Розыгрыш: **${displayValue(raffle.title, 'Без названия')}**`,
-      '',
-      'Теперь условия подписки и размещения будут учитываться в этом розыгрыше.'
-    ].join('\n'),
-    [
-      [{ text: '📊 Статистика розыгрыша', callback_data: `raffle_stats:${raffle.id}` }],
-      [{ text: '🏠 Главное меню', callback_data: 'main_menu' }]
-    ]
-  );
-}
+return sendMessage(
+  target,
+  [
+    '✅ Каналы добавлены к совместному розыгрышу.',
+    '',
+    `Розыгрыш: **${displayValue(raffle.title, 'Без названия')}**`,
+    '',
+    '             V・ᴥ・V',
+    '',
+    '*Теперь условия подписки и размещения будут учитываться в этом розыгрыше.*'
+  ].join('\n'),
+  [
+    [{ text: '📊 Статистика розыгрыша', callback_data: `raffle_stats:${raffle.id}` }],
+    [{ text: '🏠 Главное меню', callback_data: 'main_menu' }]
+  ]
+);
 
 // =========================
 // MAX update parser
