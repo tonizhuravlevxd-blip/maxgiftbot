@@ -4468,6 +4468,7 @@ return sendMessage(
     [{ text: '🏠 Главное меню', callback_data: 'main_menu' }]
   ]
 );
+}  
 
 // =========================
 // MAX update parser
