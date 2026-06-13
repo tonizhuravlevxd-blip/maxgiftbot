@@ -435,6 +435,8 @@ function sleep(ms) {
   return new Promise(resolve => setTimeout(resolve, delay));
 }
 
+const RAFFLE_CREATE_TOTAL_STEPS = 8;
+
 function buildCreateStepProgress(step, title = '') {
   const total = RAFFLE_CREATE_TOTAL_STEPS;
   const current = Math.min(Math.max(Number(step) || 1, 1), total);
@@ -462,6 +464,36 @@ function buildCreateStepProgress(step, title = '') {
     `${emoji} **Шаг ${current}/${total}${cleanTitle ? ` — ${cleanTitle}` : ''}**`,
     `\`${bar} ${percent}%\``
   ].join('\n');
+}
+
+function buildCreateStepMessage(step, title, lines = []) {
+  const body = Array.isArray(lines) ? lines : [lines];
+
+  return [
+    buildCreateStepProgress(step, title),
+    '',
+    ...body
+  ].filter(line => line !== undefined && line !== null).join('\n');
+}
+
+function buildRaffleTitlePrompt() {
+  return buildCreateStepMessage(1, 'Название', [
+    'Введите название розыгрыша👇',
+    'Пример:',
+    'РОЗЫГРЫШ *Iphone 17 PRO*'
+  ]);
+}
+
+function buildRaffleDescriptionPrompt() {
+  return buildCreateStepMessage(2, 'Описание', [
+    'Введите описание розыгрыша:'
+  ]);
+}
+
+function buildRafflePrizesPrompt() {
+  return buildCreateStepMessage(3, 'Призы', [
+    'Введите список призов, каждый с новой строки: без запятой'
+  ]);
 }
 
 function buildCreateStepBackKeyboard(backStep, backText = '⬅️ Назад') {
@@ -7385,6 +7417,7 @@ return sendMessage(
   previewText,
   keyboard
 );
+}
 
 function buildCreatedRaffleMessage(sessionData, raffle, invite) {
   return [
@@ -9057,34 +9090,38 @@ async function handleSessionMessage(message) {
     }
 
     await setSession(userId, 'await_description', data);
-await sendMessage(
-  target,
-  buildRaffleDescriptionPrompt(),
-  buildCreateStepBackKeyboard('title', '⬅️ Назад к названию')
-);
+    await sendMessage(
+      target,
+      buildRaffleDescriptionPrompt(),
+      buildCreateStepBackKeyboard('title', '⬅️ Назад к названию')
+    );
+    return true;
+  }
 
   if (state === 'await_description') {
     data.description = safeText(text, 2000);
 
     await setSession(userId, 'await_prizes', data);
-await sendMessage(
-  target,
-  buildRafflePrizesPrompt(),
-  buildCreateStepBackKeyboard('description', '⬅️ Назад к описанию')
-);
+    await sendMessage(
+      target,
+      buildRafflePrizesPrompt(),
+      buildCreateStepBackKeyboard('description', '⬅️ Назад к описанию')
+    );
+    return true;
+  }
 
   if (state === 'await_prizes') {
     const prizes = safeText(text, 3000);
     const prizeList = prizes.split('\n').map(x => x.trim()).filter(Boolean);
 
-if (!prizeList.length) {
-  await sendMessage(target, buildCreateStepMessage(3, 'Призы', [
-    'Добавьте хотя бы один приз.',
-    '',
-    'Введите список призов, каждый с новой строки: без запятой'
-  ]));
-  return true;
-}
+    if (!prizeList.length) {
+      await sendMessage(target, buildCreateStepMessage(3, 'Призы', [
+        'Добавьте хотя бы один приз.',
+        '',
+        'Введите список призов, каждый с новой строки: без запятой'
+      ]));
+      return true;
+    }
 
     data.prizes = prizeList.join('\n');
     data.prize_count = prizeList.length;
@@ -9096,7 +9133,6 @@ if (!prizeList.length) {
     });
     return true;
   }
-
   if (state === 'await_publish_date' || state === 'edit_publish_date') {
     const parsed = parseEndDate(text);
 
@@ -10604,19 +10640,23 @@ async function handleCallbackQuery(cb) {
 
     if (step === 'description' && session.state === 'await_prizes') {
       await setSession(userId, 'await_description', sessionData);
-await sendMessage(
-  target,
-  buildRaffleDescriptionPrompt(),
-  buildCreateStepBackKeyboard('title', '⬅️ Назад к названию')
-);
+      await sendMessage(
+        target,
+        buildRaffleDescriptionPrompt(),
+        buildCreateStepBackKeyboard('title', '⬅️ Назад к названию')
+      );
+      return;
+    }
 
     if (step === 'prizes' && session.state === 'await_publish_date') {
       await setSession(userId, 'await_prizes', sessionData);
-await sendMessage(
-  target,
-  buildRafflePrizesPrompt(),
-  buildCreateStepBackKeyboard('description', '⬅️ Назад к описанию')
-);
+      await sendMessage(
+        target,
+        buildRafflePrizesPrompt(),
+        buildCreateStepBackKeyboard('description', '⬅️ Назад к описанию')
+      );
+      return;
+    }
 
     if (step === 'publish_date' && session.state === 'await_end_date') {
       await setSession(userId, 'await_publish_date', sessionData);
