@@ -2093,7 +2093,7 @@ async function saveManualRafflePostUrl(target, userId, raffleId, postUrl) {
       'Теперь в **Мои розыгрыши** название будет кликабельным.'
     ].join('\n'),
     [
-      [{ text: '🔎 Мои розыгрыши', callback_data: 'my_raffles' }],
+      [{ text: '📁 Мои розыгрыши', callback_data: 'my_raffles' }],
       [{ text: '🔗 Открыть пост', url: cleanUrl }]
     ]
   );
@@ -4835,7 +4835,7 @@ async function sendMainMenu(target, userId = null) {
       { text: '➕ Добавить канал', callback_data: 'add_channel' },
       { text: '📡 Мои каналы', callback_data: 'my_channels' }
     ],
-    [{ text: '🔎 Мои розыгрыши', callback_data: 'my_raffles' }],
+    [{ text: '📁 Мои розыгрыши', callback_data: 'my_raffles' }],
     [{ text: '🎁 Участвовать', callback_data: 'join_latest' }],
     [{ text: '🍒 Почему мы?', callback_data: 'why_us' }]
   ];
@@ -7436,7 +7436,7 @@ function buildCreatedRaffleKeyboard(raffle, userId = null) {
     keyboard.push([{ text: '📣 Увеличить охват', callback_data: `promo_offer:${raffle.id}` }]);
   }
 
-  keyboard.push([{ text: '🔎 Мои розыгрыши', callback_data: 'my_raffles' }]);
+  keyboard.push([{ text: '📁 Мои розыгрыши', callback_data: 'my_raffles' }]);
 
   return keyboard;
 }
@@ -8921,7 +8921,7 @@ async function sendRaffleStats(target, raffleId, requesterUserId = null) {
 
   const keyboard = [
     [{ text: '⬅️ Назад к розыгрышу', callback_data: `refresh_raffle:${raffle.id}` }],
-    [{ text: '🔎 Мои розыгрыши', callback_data: 'my_raffles' }]
+    [{ text: '📁 Мои розыгрыши', callback_data: 'my_raffles' }]
   ];
 
   if (isAdmin(requesterUserId)) {
@@ -10329,7 +10329,7 @@ async function sendStopRaffleConfirmation(target, userId, raffleId) {
       { text: '✅ Да, завершить сейчас', callback_data: `stop_raffle_confirmed:${raffle.id}` },
       { text: '❌ Нет, назад', callback_data: `refresh_raffle:${raffle.id}` }
     ],
-    [{ text: '🔎 Мои розыгрыши', callback_data: 'my_raffles' }]
+    [{ text: '📁 Мои розыгрыши', callback_data: 'my_raffles' }]
   ]);
 }
 
@@ -10357,7 +10357,7 @@ async function sendMyRafflesMenu(target, userId) {
   return sendMessage(
     target,
     [
-      '🔎 **Мои розыгрыши**',
+      '📁 **Мои розыгрыши**',
       '',
       'Выберите раздел:',
       '',
