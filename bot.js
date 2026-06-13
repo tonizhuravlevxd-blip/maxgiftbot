@@ -9786,7 +9786,7 @@ async function sendActiveRafflesJoinMenu(target, userId) {
   }
 
   lines.push('', 'Хотите поднять свой активный розыгрыш первым в списке? Нажмите **Купить ТОП 1**.');
-  lines.push('', 'Уже получили билет? Нажмите **🎟️ Участвую**, чтобы увидеть свои активные розыгрыши.');
+  lines.push('', 'Уже получили билет? Нажмите **🎟️ Участвую**, чтобы увидеть свои активные розыгрыши.ʕ ·ᴥ·ʔ');
 
   keyboard.push([{ text: `🥇 Купить ТОП 1 — ${Number(PROMO_TOP1_PRICE_RUB).toFixed(0)} ₽`, callback_data: 'top1_buy' }]);
   keyboard.push([{ text: '🎟️ Участвую', callback_data: 'joined_raffles' }]);
