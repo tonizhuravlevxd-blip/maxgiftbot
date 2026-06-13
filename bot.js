@@ -48,6 +48,16 @@ if (
 }
 
 const GENERAL_CHANNEL_ID = process.env.GENERAL_CHANNEL_ID || '';
+const GENERAL_CHANNEL_URL = String(
+  process.env.GENERAL_CHANNEL_URL ||
+  process.env.GENERAL_CHANNEL_LINK ||
+  ''
+).trim();
+
+const GENERAL_CHANNEL_PUBLIC_NAME = String(
+  process.env.GENERAL_CHANNEL_PUBLIC_NAME ||
+  'РОЗЫГРЫШ ТОП'
+).trim() || 'РОЗЫГРЫШ ТОП';
 const RESULTS_CHANNEL_ID = String(
   process.env.RESULTS_CHANNEL_ID ||
   process.env.RESULT_CHANNEL_ID ||
@@ -1147,10 +1157,10 @@ function getPromotionProductInfo(product, options = {}) {
   if (code === PROMO_TOP1_PRODUCT_CODE) {
     return {
       product: PROMO_TOP1_PRODUCT_CODE,
-      title: 'ТОП 1 в меню участия + публикация в General',
+      title: `ТОП 1 в меню участия + публикация в ${GENERAL_CHANNEL_PUBLIC_NAME}`,
       shortTitle: 'Купить ТОП 1',
       priceRub: PROMO_TOP1_PRICE_RUB,
-      description: 'ТОП 1 в меню участия и публикация розыгрыша в General-канале'
+      description: `ТОП 1 в меню участия и публикация розыгрыша в ${GENERAL_CHANNEL_PUBLIC_NAME}`
     };
   }
 
@@ -1362,6 +1372,7 @@ async function tryMarkPromotionPaymentApplied(paymentId) {
 async function buildPromotionOfferText(raffle) {
   const number = getRafflePublicNumber(raffle);
   const generalPriceRub = await getGeneralPromoPriceRub(raffle.id);
+  const generalChannel = formatGeneralChannelMention();
 
   return [
     '📣 **Хотите увеличить охват розыгрыша?**',
@@ -1370,10 +1381,10 @@ async function buildPromotionOfferText(raffle) {
     '',
     `1. **Публикация в нашем канале розыгрышей** — сейчас для этого розыгрыша **${Number(generalPriceRub).toFixed(0)} ₽**.`,
     `Цена чередуется: **1-я публикация — ${Number(PROMO_GENERAL_PRICE_RUB).toFixed(0)} ₽**, **2-я — ${Number(PROMO_GENERAL_REPEAT_PRICE_RUB).toFixed(0)} ₽**, **3-я снова ${Number(PROMO_GENERAL_PRICE_RUB).toFixed(0)} ₽**, **4-я снова ${Number(PROMO_GENERAL_REPEAT_PRICE_RUB).toFixed(0)} ₽** и так далее.`,
-    `После оплаты бот сначала попросит выбрать время: **сейчас** или **ввести время**. Когда выбранное время наступит, бот найдёт ближайшее свободное окно General-канала с интервалом **${GENERAL_PROMO_SPACING_MINUTES} мин.** и опубликует пост.`,
+    `После оплаты бот сначала попросит выбрать время: **сейчас** или **ввести время**. Когда выбранное время наступит, бот найдёт ближайшее свободное окно в ${generalChannel} с интервалом **${GENERAL_PROMO_SPACING_MINUTES} мин.** и опубликует пост.`,
     '',
     `2. **Купить ТОП 1** — ${Number(PROMO_TOP1_PRICE_RUB).toFixed(0)} ₽.`,
-    'Ваш активный розыгрыш поднимется на первое место в меню «Участвовать» и дополнительно получит публикацию в General-канале после выбора времени.',
+    `Ваш активный розыгрыш поднимется на первое место в меню «Участвовать» и дополнительно получит публикацию в ${generalChannel} после выбора времени.`,
     '',
     `3. **Размещение в боте с 7000+ пользователей** — ${Number(PROMO_BOT_PRICE_RUB).toFixed(0)} ₽.`,
     'После оплаты администратор получит ваш ID и кликабельный профиль, затем свяжется с вами для размещения.',
@@ -1542,14 +1553,15 @@ async function sendPaidGeneralPublishTimeChoice(target, paymentOrRow, raffle, pr
   const paymentId = String(paymentOrRow?.payment_id || paymentOrRow?.id || '').trim();
   const userId = String(paymentOrRow?.user_id || paymentOrRow?.metadata?.user_id || raffle?.creator_user_id || '').trim();
   const productCode = String(product || paymentOrRow?.product || paymentOrRow?.metadata?.product || PROMO_GENERAL_PRODUCT_CODE).trim();
+  const generalChannel = formatGeneralChannelMention();
 
   if (!paymentId || !raffle || !userId) {
     return false;
   }
 
-  const productTitle = productCode === PROMO_TOP1_PRODUCT_CODE
-    ? 'ТОП 1 + публикация в General'
-    : 'платная публикация в General';
+const productTitle = productCode === PROMO_TOP1_PRODUCT_CODE
+  ? `ТОП 1 + публикация в ${GENERAL_CHANNEL_PUBLIC_NAME}`
+  : `платная публикация в ${GENERAL_CHANNEL_PUBLIC_NAME}`;
 
   await sendMessage(
     userId,
@@ -1560,12 +1572,12 @@ async function sendPaidGeneralPublishTimeChoice(target, paymentOrRow, raffle, pr
       `Розыгрыш № **${getRafflePublicNumber(raffle)}**`,
       `Название: **${displayValue(raffle.title, 'Без названия')}**`,
       '',
-      'Выберите, когда начать платную публикацию в General:',
+      `Выберите, когда начать платную публикацию в ${generalChannel}:`,
       '',
       '• **Сейчас** — бот сразу найдёт ближайшее свободное окно с учётом интервала.',
       '• **Ввести время** — когда указанное время наступит, бот только тогда найдёт свободное окно и поставит публикацию.',
       '',
-      `Интервал между платными постами в General: **${GENERAL_PROMO_SPACING_MINUTES} мин.**`
+      `Интервал между платными постами в ${generalChannel}: **${GENERAL_PROMO_SPACING_MINUTES} мин.**`
     ].join('\n'),
     [
       [{ text: '🚀 Сейчас', callback_data: `paid_general_now:${paymentId}` }],
@@ -1998,9 +2010,9 @@ async function getBestRafflePostForLink(raffleId) {
     hasPost: true,
     url,
     isGeneral: Boolean(post.is_general),
-    channelTitle: post.is_general
-      ? 'General'
-      : displayValue(post.channel_title, post.channel_id ? `Канал ${post.channel_id}` : 'канал')
+channelTitle: post.is_general
+  ? GENERAL_CHANNEL_PUBLIC_NAME
+  : displayValue(post.channel_title, post.channel_id ? `Канал ${post.channel_id}` : 'канал')
   };
 }
 
@@ -2284,6 +2296,12 @@ function markdownLink(text, url) {
   if (!cleanUrl) return cleanText || 'Канал';
 
   return `[${cleanText || 'Канал'}](${cleanUrl})`;
+}
+
+function formatGeneralChannelMention() {
+  return GENERAL_CHANNEL_URL
+    ? markdownLink(GENERAL_CHANNEL_PUBLIC_NAME, GENERAL_CHANNEL_URL)
+    : GENERAL_CHANNEL_PUBLIC_NAME;
 }
 
 function formatChannelName(channel) {
@@ -5477,12 +5495,13 @@ async function schedulePaidGeneralPublishesForRaffle(raffleId, options = {}) {
 
 function formatGeneralPromoQueueResult(result) {
   const scheduledAt = result?.scheduledAt || result?.queue?.scheduled_at;
+  const generalChannel = formatGeneralChannelMention();
 
   if (['queued', 'already_queued'].includes(String(result?.status || '')) && scheduledAt) {
-    return `Публикация в General-канале запланирована на **${formatDateTime(scheduledAt)}**. Интервал между платными постами — **${GENERAL_PROMO_SPACING_MINUTES} мин.**`;
+    return `Публикация в ${generalChannel} запланирована на **${formatDateTime(scheduledAt)}**. Интервал между платными постами — **${GENERAL_PROMO_SPACING_MINUTES} мин.**`;
   }
 
-  return `Бот поставит розыгрыш в очередь General-канала и опубликует в ближайшее свободное окно с интервалом **${GENERAL_PROMO_SPACING_MINUTES} мин.**`;
+  return `Бот поставит розыгрыш в очередь ${generalChannel} и опубликует в ближайшее свободное окно с интервалом **${GENERAL_PROMO_SPACING_MINUTES} мин.**`;
 }
 
 async function getPaidGeneralPaymentContext(paymentId) {
@@ -5698,7 +5717,7 @@ async function processGeneralPublishRequestQueuedItem(item) {
     await sendMessage(
       userId || raffle.creator_user_id,
       [
-        '📣 **Платная публикация General поставлена в очередь.**',
+        `📣 **Платная публикация в ${formatGeneralChannelMention()} поставлена в очередь.**`,
         '',
         `Розыгрыш № **${getRafflePublicNumber(raffle)}**`,
         `Название: **${displayValue(raffle.title, 'Без названия')}**`,
@@ -5745,7 +5764,7 @@ async function handlePaidGeneralPublishNow(target, userId, paymentId) {
   if (['queued', 'request_queued'].includes(String(result?.status || ''))) {
     const scheduledAt = result?.scheduledAt || result?.queue?.scheduled_at;
     const line = String(result.status) === 'request_queued'
-      ? `Запрос на публикацию сохранён. Когда розыгрыш будет активен, бот найдёт свободное окно General.`
+      ? `Запрос на публикацию сохранён. Когда розыгрыш будет активен, бот найдёт свободное окно в ${formatGeneralChannelMention()}.`
       : formatGeneralPromoQueueResult(result);
 
     return sendMessage(
@@ -5780,7 +5799,7 @@ async function startPaidGeneralPublishTimeInput(target, userId, paymentId) {
   return sendMessage(
     target,
     [
-      'Введите время платной публикации в General одним сообщением.',
+      `Введите время платной публикации в ${formatGeneralChannelMention()} одним сообщением.`,
       '',
       `Формат: \`DD.MM.YYYY HH:mm\` или \`YYYY-MM-DD HH:mm\``,
       `Пример: \`${dayjs.utc().add(BOT_UTC_OFFSET_MINUTES, 'minute').add(1, 'hour').format('DD.MM.YYYY HH:mm')}\``,
@@ -5844,7 +5863,7 @@ async function handlePaidGeneralPublishTimeMessage(message, data = {}) {
         `Выбранное время: **${formatDateTime(parsed)}**`,
         '',
         String(result.status) === 'request_queued'
-          ? 'Когда это время наступит, бот найдёт ближайшее свободное окно General-канала.'
+          ? `Когда это время наступит, бот найдёт ближайшее свободное окно в ${formatGeneralChannelMention()}.`
           : formatGeneralPromoQueueResult(result)
       ].join('\n')
     );
@@ -5856,9 +5875,10 @@ async function handlePaidGeneralPublishTimeMessage(message, data = {}) {
 
 function formatGeneralPublishAdminResult(result) {
   const status = String(result?.status || '');
+  const generalChannel = formatGeneralChannelMention();
 
   if (status === 'missing_general_channel') {
-    return '⚠️ GENERAL_CHANNEL_ID не задан в `.env`, поэтому публикация в General-канал невозможна.';
+    return `⚠️ GENERAL_CHANNEL_ID не задан в \`.env\`, поэтому публикация в ${generalChannel} невозможна.`;
   }
 
   if (status === 'missing_raffle') {
@@ -5866,14 +5886,14 @@ function formatGeneralPublishAdminResult(result) {
   }
 
   if (status === 'not_active') {
-    return '⚠️ В General можно поставить только активный розыгрыш.';
+    return `⚠️ В ${generalChannel} можно поставить только активный розыгрыш.`;
   }
 
   if (['queued', 'already_queued'].includes(status)) {
-    return `✅ Розыгрыш поставлен в очередь General-канала. ${formatGeneralPromoQueueResult(result)}`;
+    return `✅ Розыгрыш поставлен в очередь ${generalChannel}. ${formatGeneralPromoQueueResult(result)}`;
   }
 
-  return `⚠️ Не удалось поставить розыгрыш в очередь General. Статус: ${displayValue(status, 'неизвестно')}.`;
+  return `⚠️ Не удалось поставить розыгрыш в очередь ${generalChannel}. Статус: ${displayValue(status, 'неизвестно')}.`;
 }
 
 async function adminScheduleGeneralPublish(target, userId, raffleId) {
@@ -7951,11 +7971,11 @@ async function activateRaffle(raffleId) {
 
       if (queuedResults.length) {
         const lastResult = queuedResults[queuedResults.length - 1];
-        generalQueueLine = `\n\n📣 Платных General-размещений в очереди: **${queuedResults.length}**. ${formatGeneralPromoQueueResult(lastResult)}`;
+        generalQueueLine = `\n\n📣 Платных размещений в ${formatGeneralChannelMention()} в очереди: **${queuedResults.length}**. ${formatGeneralPromoQueueResult(lastResult)}`;
       }
     } catch (error) {
       console.error('Ошибка постановки платной публикации General в очередь:', error.message);
-      generalQueueLine = '\n\n⚠️ Платная публикация в General не поставлена в очередь. Администратор проверит ошибку.';
+      generalQueueLine = `\n\n⚠️ Платная публикация в ${formatGeneralChannelMention()} не поставлена в очередь. Администратор проверит ошибку.`;
     }
   }
 
