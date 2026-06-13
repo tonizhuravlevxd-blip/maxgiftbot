@@ -7277,7 +7277,7 @@ function buildRaffleDraftPreviewText(data = {}) {
     `⏰ Окончание: **${formatDateTime(data.end_at)}**`,
     `🖼 Фото: **${data.photo_attachment ? 'добавлено' : 'не добавлено'}**`,
     '',
-    'Чтобы участвовать, нажмите кнопку ниже.',
+    `👆 Нету своего крутого фото❔ Наше **${markdownLink('ИИ', 'https://max.ru/id236700415542_bot')}** сделает бесплатно за несколько секунд.`,
     '',
     buildRaffleFooter({ id: 'будет присвоен' }),
     '',
