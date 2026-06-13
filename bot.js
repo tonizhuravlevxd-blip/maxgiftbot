@@ -3912,7 +3912,7 @@ async function sendAddChannelInstruction(target, options = {}) {
     ]
     : [
       [{ text: '🔄 Обновить', callback_data: 'refresh_channels' }],
-      [{ text: '📢 Мои каналы', callback_data: 'my_channels' }],
+      [{ text: '📡 Мои каналы', callback_data: 'my_channels' }],
       [{ text: '🏠 Главное меню', callback_data: 'main_menu' }]
     ];
 
@@ -3926,7 +3926,7 @@ async function sendMyChannels(target, userId) {
     return sendMessage(
       target,
       [
-        '📢 **Мои каналы**',
+        '📡 **Мои каналы**',
         '',
         'Пока нет подключённых каналов.',
         '',
@@ -3940,7 +3940,7 @@ async function sendMyChannels(target, userId) {
     );
   }
 
-  let text = '📢 **Мои каналы**\n\n';
+  let text = '📡 **Мои каналы**\n\n';
 
   for (const ch of channels) {
     text += `• ${formatChannelWithLink(ch)}\n`;
@@ -4015,7 +4015,7 @@ async function sendChannelSelectionMenu(target, userId, data, mode = 'create', o
 
   let text = mode === 'collab'
     ? '🤝 **Каналы для совместного розыгрыша**\n\n'
-    : '📢 **Каналы для розыгрыша**\n\n';
+    : '📡 **Каналы для розыгрыша**\n\n';
 
   text += 'Выберите каналы из списка ниже. Для каждого канала можно отдельно включить:\n';
   text += '✔️ обязательную подписку;\n';
@@ -4777,7 +4777,7 @@ function buildWelcomeText(userOrId) {
     `Сначала добавьте бота ${BOT_USERNAME} в канал или найдите его по имени **${BOT_SEARCH_NAME}**.`,
     `Затем выдайте боту ${permissionsLink} администратора на размещение постов и нажмите **Добавить канал** / **Обновить** в меню.`,
     '',
-    '**Через меню можно создать розыгрыш, подключить каналы, добавить фото к посту, создавать АВТОПОСТ и тесты для ваших каналов, пригласить соадмина и смотреть статистику.**',
+    `**Через меню можно создать розыгрыш🎉, подключить каналы, создать ${markdownLink('ИИ', 'https://max.ru/id236700415542_bot')} фото бесплатно🖼️, создавать АВТОПОСТ⏰ и ТЕСТЫ для вашей аудитории, пригласить соадмина и смотреть статистику.📊**`,
     adminLine
   ].join('\n');
 }
@@ -4833,7 +4833,7 @@ async function sendMainMenu(target, userId = null) {
     [{ text: '🎉 Создать розыгрыш', callback_data: 'create_raffle' }],
     [
       { text: '➕ Добавить канал', callback_data: 'add_channel' },
-      { text: '📢 Мои каналы', callback_data: 'my_channels' }
+      { text: '📡 Мои каналы', callback_data: 'my_channels' }
     ],
     [{ text: '🔎 Мои розыгрыши', callback_data: 'my_raffles' }],
     [{ text: '🎁 Участвовать', callback_data: 'join_latest' }]
@@ -7277,7 +7277,7 @@ function buildRaffleDraftPreviewText(data = {}) {
     `⏰ Окончание: **${formatDateTime(data.end_at)}**`,
     `🖼 Фото: **${data.photo_attachment ? 'добавлено' : 'не добавлено'}**`,
     '',
-    `👆 Нету своего крутого фото❔ Наше **${markdownLink('ИИ', 'https://max.ru/id236700415542_bot')}** сделает бесплатно за несколько секунд.`,
+    `👆 Нету своего крутого фото❓      **${markdownLink('ИИ', 'https://max.ru/id236700415542_bot')}** сделает *бесплатно* за секунды.`,
     '',
     buildRaffleFooter({ id: 'будет присвоен' }),
     '',
@@ -7309,7 +7309,7 @@ async function sendRaffleDraftPreview(target, userId, data = {}) {
     ],
     [
       { text: '🎁 Призы', callback_data: 'draft_edit_prizes' },
-      { text: '📢 Каналы', callback_data: 'draft_edit_channels' }
+      { text: '📡 Каналы', callback_data: 'draft_edit_channels' }
     ],
     [
       { text: '🖼 Добавить фото', callback_data: 'draft_edit_photo' },
@@ -11444,7 +11444,7 @@ async function handleMaxUpdate(update) {
             'Если при публикации MAX вернёт ошибку прав, проверьте права бота на размещение постов.'
           ].join('\n'),
           [
-            [{ text: '📢 Мои каналы', callback_data: 'my_channels' }],
+            [{ text: '📡 Мои каналы', callback_data: 'my_channels' }],
             [{ text: '🎉 Создать розыгрыш', callback_data: 'create_raffle' }]
           ]
         ).catch(error => {
@@ -11555,7 +11555,7 @@ async function handleMaxUpdate(update) {
             formatChannelWithLink(autoRegister.channel)
           ].join('\n'),
           [
-            [{ text: '📢 Мои каналы', callback_data: 'my_channels' }],
+            [{ text: '📡 Мои каналы', callback_data: 'my_channels' }],
             [{ text: '🎉 Создать розыгрыш', callback_data: 'create_raffle' }]
           ]
         ).catch(error => {
