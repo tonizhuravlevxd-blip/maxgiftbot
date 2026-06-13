@@ -1397,7 +1397,7 @@ async function buildPromotionOfferKeyboard(raffle) {
   const generalPriceRub = await getGeneralPromoPriceRub(raffle.id);
 
   return [
-    [{ text: `📢 В General — ${Number(generalPriceRub).toFixed(0)} ₽`, callback_data: `promo_buy:${raffle.id}:${PROMO_GENERAL_PRODUCT_CODE}` }],
+    [{ text: `📢 В ${GENERAL_CHANNEL_PUBLIC_NAME} — ${Number(generalPriceRub).toFixed(0)} ₽`, callback_data: `promo_buy:${raffle.id}:${PROMO_GENERAL_PRODUCT_CODE}` }],
     [{ text: `🥇 Купить ТОП 1 — ${Number(PROMO_TOP1_PRICE_RUB).toFixed(0)} ₽`, callback_data: `promo_buy:${raffle.id}:${PROMO_TOP1_PRODUCT_CODE}` }],
     [{ text: `🚀 В боте 7000+ — ${Number(PROMO_BOT_PRICE_RUB).toFixed(0)} ₽`, callback_data: `promo_buy:${raffle.id}:${PROMO_BOT_PRODUCT_CODE}` }]
   ];
