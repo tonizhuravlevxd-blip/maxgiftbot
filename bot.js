@@ -444,7 +444,7 @@ function buildCreateStepProgress(step, title = '') {
   const filled = Math.max(1, Math.round((current / total) * width));
   const empty = Math.max(0, width - filled);
   const percent = Math.round((current / total) * 100);
-  const bar = `${'█'.repeat(filled)}${'░'.repeat(empty)}`;
+  const bar = `${'🟩'.repeat(filled)}${'⬜'.repeat(empty)}`;
   const cleanTitle = String(title || '').trim();
 
   const stepEmojis = {
