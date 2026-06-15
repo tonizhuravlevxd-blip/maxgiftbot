@@ -540,7 +540,7 @@ async function sendRafflePhotoStepPrompt(target, data = {}) {
   ]);
 
   keyboard.push([
-    { text: '🤖 Сделать фото бесплатно', url: aiPhotoUrl }
+    { text: '🧊 Сделать фото бесплатно', url: aiPhotoUrl }
   ]);
 
   keyboard.push(
