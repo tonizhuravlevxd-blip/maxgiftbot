@@ -1298,11 +1298,38 @@ function setupApostModule(options) {
     return false;
   }
 
-  async function handleMessage(message) {
-    const text = String(message.text || '').trim();
-    const markdownText = extractMarkdownTextFromMessage(message);
-    const userId = message.from.id;
-    const target = message.chat.id;
+async function handleMessage(message) {
+  const text = String(
+    message?.text ||
+    message?.body?.text ||
+    message?.message?.body?.text ||
+    ''
+  ).trim();
+
+  const markdownText = extractMarkdownTextFromMessage(message);
+
+  const userId = String(
+    message?.from?.id ||
+    message?.sender?.user_id ||
+    message?.message?.sender?.user_id ||
+    ''
+  ).trim();
+
+  const recipient =
+    message?.recipient ||
+    message?.message?.recipient ||
+    {};
+
+  const target = recipient?.chat_type === 'dialog'
+    ? { type: 'user_id', id: userId }
+    : recipient?.chat_id
+      ? { type: 'chat_id', id: String(recipient.chat_id) }
+      : { type: 'user_id', id: userId };
+
+  if (!userId) {
+    console.warn('apost handleMessage: user_id не найден', message);
+    return false;
+  }
 
     if (isApostStartCommand(text)) {
       await clearApostSession(userId);
