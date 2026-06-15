@@ -516,7 +516,7 @@ function buildRaffleDescriptionPrompt() {
 
 function buildRafflePrizesPrompt() {
   return buildCreateStepMessage(3, 'Призы', [
-    '       ʕ ·ᴥ·ʔ⊃━☆ﾟ. * 🎁',
+    '       ʕ ·ᴥ·ʔ⊃━☆ﾟ. *🎁',
     'Введите список призов, каждый с новой строки: без запятой'
   ]);
 }
@@ -8657,7 +8657,7 @@ async function sendPublishDatePrompt(target, data = {}, options = {}) {
     : buildCreateStepMessage(5, 'Публикация', [
         '🕒 **Время публикации поста**',
         '',
-        'Укажите, когда бот должен опубликовать пост с розыгрышем в выбранных каналах. Время указывается по МСК.',
+        'Укажите, когда бот должен опубликовать пост с розыгрышем в выбранных каналах.',
         `Сейчас по боту: **${formatDateTime(minPublishAt)}**.`,
         '',
         'Можно нажать быструю кнопку или ввести дату вручную по МСК:',
