@@ -70,7 +70,17 @@ function setupHorseRacesModule(options = {}) {
     productCode: 'horse_race_create',
     testMode: String(process.env.HORSE_RACE_TEST_MODE || 'false').toLowerCase() === 'true',
     minStartMinutes: Math.max(1, Number(process.env.HORSE_RACE_MIN_START_MINUTES || 5)),
-    maxActivePerUser: Math.max(1, Number(process.env.HORSE_RACE_MAX_ACTIVE_PER_USER || 3))
+    maxActivePerUser: Math.max(1, Number(process.env.HORSE_RACE_MAX_ACTIVE_PER_USER || 3)),
+
+    morePrizesUrl: normalizePublicHttpUrl(
+      process.env.MORE_PRIZES_URL ||
+      process.env.BOT_MORE_PRIZES_URL ||
+      BOT_PUBLIC_URL ||
+      APP_BASE_URL
+    ),
+
+    morePrizesLabel:
+      cleanText(process.env.MORE_PRIZES_LABEL || 'ТУТ', 40) || 'ТУТ'
   };
 
   const webUrl = normalizeBaseUrl(
@@ -2208,11 +2218,21 @@ function setupHorseRacesModule(options = {}) {
       });
     }
 
+    const morePrizesTarget =
+      config.morePrizesUrl ||
+      BOT_PUBLIC_URL ||
+      APP_BASE_URL;
+
+    const morePrizesLine = morePrizesTarget
+      ? `Еще больше призов 🥳 [${escapeMarkdownText(config.morePrizesLabel)}](${morePrizesTarget})`
+      : `Еще больше призов 🥳 ${escapeMarkdownText(config.morePrizesLabel)}`;
+
     lines.push(
       '',
       `*Чтобы участвовать, нажмите кнопку 🐎 Участвовать*`,
       '',
-      `Скачки созданы с помощью ${BOT_PUBLIC_URL ? `[РОЗЫГРЫШ БОТ](${BOT_PUBLIC_URL})` : 'РОЗЫГРЫШ БОТ'}`
+      `Скачки созданы с помощью ${BOT_PUBLIC_URL ? `[РОЗЫГРЫШ БОТ](${BOT_PUBLIC_URL})` : 'РОЗЫГРЫШ БОТ'}`,
+      morePrizesLine
     );
 
     return lines.join('\n');
@@ -2227,11 +2247,19 @@ function setupHorseRacesModule(options = {}) {
   }
 
 
-  async function notifyRaceResults() {
     const roundsRes = await pool.query(`
-      SELECT hrr.*, hr.title, hr.creator_user_id
+      SELECT
+        hrr.*,
+        hr.title,
+        hr.creator_user_id,
+        organizer.first_name AS organizer_first_name,
+        organizer.last_name AS organizer_last_name,
+        organizer.username AS organizer_username
       FROM horse_race_rounds hrr
-      JOIN horse_races hr ON hr.id = hrr.horse_race_id
+      JOIN horse_races hr
+        ON hr.id = hrr.horse_race_id
+      LEFT JOIN users organizer
+        ON organizer.max_user_id = hr.creator_user_id
       WHERE hrr.status = 'finished'
         AND hrr.winner_user_id IS NOT NULL
         AND hrr.winner_notified_at IS NULL
@@ -2241,12 +2269,31 @@ function setupHorseRacesModule(options = {}) {
 
     for (const round of roundsRes.rows) {
       const color = serializeHorseColor(round.winner_color);
+
+      const organizerFirstName =
+        cleanText(round.organizer_first_name, 100);
+
+      const organizerLastName =
+        cleanText(round.organizer_last_name, 100);
+
+      const organizerUsername =
+        cleanText(round.organizer_username, 100).replace(/^@/, '');
+
+      const organizerName =
+        [organizerFirstName, organizerLastName]
+          .filter(Boolean)
+          .join(' ') ||
+        (organizerUsername
+          ? `@${organizerUsername}`
+          : `ID ${round.creator_user_id}`);
+
       try {
         await sendMessage?.(String(round.winner_user_id), [
           '🏆 **Ваша лошадь победила!**',
           '',
           `🐎 Скачки: **${cleanText(round.title, 180)}**`,
           `🎁 Приз: **${cleanText(round.prize_text, 500) || `Приз ${round.prize_index}`}**`,
+          `👤 Приз выдаёт: **${escapeMarkdownText(organizerName)}**`,
           `🎟 Билет: **№${round.winner_ticket_number}**`,
           `🎨 Лошадь: **${color?.label || round.winner_color}**`
         ].join('\n'), [[{ text: '🐎 Посмотреть результат', url: getLaunchUrl(`race_${round.horse_race_id}`) }]]);
