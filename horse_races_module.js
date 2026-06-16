@@ -2729,13 +2729,23 @@ function setupHorseRacesModule(options = {}) {
       ? `Еще больше призов 🥳 [${escapeMarkdownText(config.morePrizesLabel)}](${morePrizesTarget})`
       : `Еще больше призов 🥳 ${escapeMarkdownText(config.morePrizesLabel)}`;
 
-    lines.push(
-      '',
-      `*Чтобы участвовать, нажмите кнопку 🐎 Участвовать*`,
-      '',
-      `Скачки созданы с помощью ${BOT_PUBLIC_URL ? `[РОЗЫГРЫШ БОТ](${BOT_PUBLIC_URL})` : 'РОЗЫГРЫШ БОТ'}`,
-      morePrizesLine
-    );
+const raceId = normalizePositiveInt(race?.id);
+
+const participateUrl = raceId
+  ? getBotUrl(`horse_join_${raceId}`)
+  : '';
+
+const participateLine = participateUrl
+  ? `*Чтобы участвовать, нажмите кнопку 🏇 [Участвовать](${participateUrl})*`
+  : `*Чтобы участвовать, нажмите кнопку 🏇 Участвовать*`;
+
+lines.push(
+  '',
+  participateLine,
+  '',
+  `Скачки созданы с помощью ${BOT_PUBLIC_URL ? `[РОЗЫГРЫШ БОТ](${BOT_PUBLIC_URL})` : 'РОЗЫГРЫШ БОТ'}`,
+  morePrizesLine
+);
 
     return lines.join('\n');
   }
@@ -2744,7 +2754,7 @@ function setupHorseRacesModule(options = {}) {
     const id = normalizePositiveInt(raceId);
     return [
       [{ text: '🐎 Участвовать', url: getBotUrl(`horse_join_${id}`) }],
-      [{ text: '🐎 Смотреть скачки', url: getLaunchUrl(`race_${id}`) }]
+      [{ text: '🏇 Смотреть скачки', url: getLaunchUrl(`race_${id}`) }]
     ];
   }
 
@@ -2793,7 +2803,7 @@ function setupHorseRacesModule(options = {}) {
         await sendMessage?.(String(round.winner_user_id), [
           '🏆 **Ваша лошадь победила!**',
           '',
-          `🐎 Скачки: **${cleanText(round.title, 180)}**`,
+          `🏇 Скачки: **${cleanText(round.title, 180)}**`,
           `🎁 Приз: **${cleanText(round.prize_text, 500) || `Приз ${round.prize_index}`}**`,
           `👤 Приз выдаёт: **${escapeMarkdownText(organizerName)}**`,
           `🎟 Билет: **№${round.winner_ticket_number}**`,
@@ -3173,7 +3183,7 @@ function renderMiniAppHtml(nonce) {
 <body>
 <div class="app">
   <div class="header"><div class="brand">🏆 РОЗЫГРЫШ ТОП</div><div id="user" class="user">MAX Mini App</div></div>
-  <div class="tabs"><button class="tab active" data-tab="raffles">🥇 Розыгрыши ТОП‑1</button><button class="tab" data-tab="races">🐎 Скачки</button></div>
+  <div class="tabs"><button class="tab active" data-tab="raffles">🥇 Розыгрыши ТОП‑1</button><button class="tab" data-tab="races">🏇 Скачки</button></div>
   <main>
     <section id="raffles-section">
       <div class="toolbar"><button id="buy-top1" class="primary">🥇 Купить ТОП‑1</button><button class="secondary" data-refresh="raffles">Обновить</button></div>
