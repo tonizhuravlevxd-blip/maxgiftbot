@@ -2246,7 +2246,7 @@ function setupHorseRacesModule(options = {}) {
     ];
   }
 
-
+  async function notifyRaceResults() {
     const roundsRes = await pool.query(`
       SELECT
         hrr.*,
