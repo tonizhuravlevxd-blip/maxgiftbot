@@ -4059,11 +4059,11 @@ function setupHorseRacesModule(options = {}) {
                   ? 'с размещением 📣'
                   : 'без размещения 🙈'
               }`,
-              `   ├ Подписки: **+${subscriptions}**`,
-              `   ├ Отписки: **-${unsubscriptions}**`,
+              `   ├ Подписки: **+${subscriptions}** 🍏`,
+              `   ├ Отписки: **-${unsubscriptions}** 🍎`,
               `   ├ Сейчас подтверждено подписанными: **${currentSubscribers}**`,
-              `   ├ Проверено пользователей: **${trackedUsers}**`,
-              `   └ Чистый прирост: **${signedNet}**`
+              `   ├ Проверено пользователей: **${trackedUsers}** 🚷`,
+              `   └ Чистый прирост: **${signedNet}** 🥂`
             ];
           })
         : ['Каналы не добавлены.']),
