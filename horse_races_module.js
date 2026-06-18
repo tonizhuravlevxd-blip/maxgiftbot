@@ -5201,11 +5201,11 @@ function renderMiniAppHtml(nonce) {
 </head>
 <body>
 <div class="app">
-  <div class="header"><div class="brand">🏆 РОЗЫГРЫШ ТОП</div><div id="user" class="user">MAX Mini App</div></div>
+  <div class="header"><div class="brand">💣 РОЗЫГРЫШ ТОП</div><div id="user" class="user">MAX Mini App</div></div>
   <div class="tabs"><button class="tab active" data-tab="raffles">🥇 Розыгрыши ТОП‑1</button><button class="tab" data-tab="races">🏇 Скачки</button></div>
   <main>
     <section id="raffles-section">
-      <div class="toolbar"><button id="buy-top1" class="primary">🥇 Купить ТОП‑1</button><button class="secondary" data-refresh="raffles">Обновить</button></div>
+      <div class="toolbar"><button id="buy-top1" class="primary">💸 Купить ТОП‑1</button><button class="secondary" data-refresh="raffles">Обновить</button></div>
       <div id="raffles" class="list"><div class="loading">Загрузка розыгрышей…</div></div>
     </section>
     <section id="races-section" class="hidden">
