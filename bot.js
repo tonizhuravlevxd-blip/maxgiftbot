@@ -12044,7 +12044,7 @@ async function sendAdminActiveRaffles(target, userId, page = 0) {
   // Поэтому показываем активные розыгрыши страницами: по умолчанию 3 розыгрыша на страницу.
   const pageSize = Math.min(
     3,
-    Math.max(1, Number(process.env.ADMIN_ACTIVE_RAFFLES_PAGE_SIZE || 3))
+    Math.max(1, Number(process.env.ADMIN_ACTIVE_RAFFLES_PAGE_SIZE || 7))
   );
 
   const requestedPage = Math.max(0, Number.parseInt(String(page || 0), 10) || 0);
