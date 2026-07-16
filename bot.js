@@ -30,7 +30,7 @@ const DATABASE_URL = process.env.DATABASE_URL || '';
 const DATABASE_SSL = String(process.env.DATABASE_SSL || process.env.PGSSL || 'true').toLowerCase() !== 'false';
 
 const MAX_BOT_TOKEN = process.env.MAX_BOT_TOKEN || '';
-const MAX_API_BASE = process.env.MAX_API_BASE || 'https://platform-api.max.ru';
+const MAX_API_BASE = process.env.MAX_API_BASE || 'https://platform-api2.max.ru';
 const MAX_API_TIMEOUT_MS = Number(process.env.MAX_API_TIMEOUT_MS || 15000);
 const MAX_WEBHOOK_SECRET = process.env.MAX_WEBHOOK_SECRET || process.env.WEBHOOK_SECRET || '';
 
